@@ -11,6 +11,7 @@ import remarkGfm from "remark-gfm";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { LeaderboardView } from "@/components/hackathons/LeaderboardView";
+import { HackathonTimelineTable } from "@/components/hackathons/HackathonTimelineTable";
 
 interface Round {
     roundNumber: number;
@@ -367,6 +368,11 @@ export default function HackathonDetailsPage() {
                                         </div>
                                     ))}
                                 </div>
+                            </section>
+
+                            {/* Timeline Table */}
+                            <section>
+                                <HackathonTimelineTable hackathon={hackathon} />
                             </section>
 
                             {/* Evaluation */}

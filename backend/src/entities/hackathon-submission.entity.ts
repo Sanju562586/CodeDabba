@@ -10,6 +10,8 @@ import {
 import { Hackathon } from './hackathon.entity';
 import { HackathonTeam } from './hackathon-team.entity';
 import { HackathonRound } from './hackathon-round.entity';
+import { User } from './user.entity';
+
 
 @Entity('hackathon_submissions')
 @Index(['teamId', 'roundId'], { unique: true })
@@ -73,6 +75,11 @@ export class HackathonSubmission {
   @Column({ nullable: true })
   evaluatedById: string;
 
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'evaluatedById' })
+  evaluatedBy: User;
+
   @Column({ nullable: true })
   evaluatedAt: Date;
 }
+

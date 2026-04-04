@@ -50,7 +50,9 @@ import { User, Role } from '../../entities/user.entity';
 import {
   HackathonActivityLog,
   ActivityType,
+  LogStatus,
 } from '../../entities/hackathon-activity-log.entity';
+import { HackathonsLoggingService } from './hackathons-logging.service';
 import { CreateHackathonDto } from './dto/create-hackathon.dto';
 import {
   RegisterHackathonDto,
@@ -91,6 +93,7 @@ export class HackathonsService {
     private activityLogsRepository: Repository<HackathonActivityLog>,
     private dataSource: DataSource,
     private readonly mailerService: MailerService,
+    private readonly loggingService: HackathonsLoggingService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -107,13 +110,18 @@ export class HackathonsService {
       },
     });
     for (const h of toOpenReg) {
+      const prevState = h.status;
       h.status = HackathonStatus.REGISTRATION_OPEN;
       await this.hackathonsRepository.save(h);
       await this.logActivity(
         h.id,
-        ActivityType.STATUS_CHANGE,
-        `Registration for "${h.title}" opened.`,
+        ActivityType.PHASE_TRANSITION,
+        `Automated Protocol: Registration for "${h.title}" opened.`,
         'SYSTEM',
+        { prevState, newState: h.status },
+        LogStatus.SUCCESS,
+        undefined,
+        h.status,
       );
     }
 
@@ -280,20 +288,36 @@ export class HackathonsService {
     hackathonId: string,
     activityType: ActivityType,
     description: string,
-    performedById?: string,
+    actorIdOrEntity?: string | User | any,
     metadata?: any,
+    status: LogStatus = LogStatus.SUCCESS,
+    roundId?: string,
+    phase?: string,
   ) {
     try {
-      const log = this.activityLogsRepository.create({
+      let actor: User | any = null;
+      if (typeof actorIdOrEntity === 'string') {
+        if (actorIdOrEntity !== 'SYSTEM') {
+          actor = await this.usersRepository.findOne({
+            where: { id: actorIdOrEntity },
+          });
+        }
+      } else {
+        actor = actorIdOrEntity;
+      }
+
+      return await this.loggingService.log({
         hackathonId,
         activityType,
         description,
-        performedById,
+        actor,
         metadata,
+        status,
+        roundId,
+        phase,
       });
-      await this.activityLogsRepository.save(log);
     } catch (error) {
-      console.error('Failed to log activity:', error);
+      this.logger.error(`Audit Log Fail: ${activityType} - ${description}`, error);
     }
   }
 
@@ -320,9 +344,13 @@ export class HackathonsService {
     const saved = await this.hackathonsRepository.save(hackathon);
     await this.logActivity(
       saved.id,
-      ActivityType.STATUS_CHANGE,
-      `Hackathon "${saved.title}" created as Draft`,
-      user.id,
+      ActivityType.HACKATHON_CREATED,
+      `Hackathon "${saved.title}" initialized as Draft by ${user.name}.`,
+      user,
+      { dto: createHackathonDto },
+      LogStatus.SUCCESS,
+      undefined,
+      'DRAFT',
     );
     return saved;
   }
@@ -466,8 +494,19 @@ export class HackathonsService {
     });
     if (!hackathon) throw new NotFoundException('Hackathon not found');
 
+    const prevState = hackathon.status;
     hackathon.status = status;
     await this.hackathonsRepository.save(hackathon);
+    await this.logActivity(
+      id,
+      ActivityType.PHASE_TRANSITION,
+      `Hackathon phase transitioned from ${prevState} to ${status} by Admin ${user.name}.`,
+      user,
+      { prevState, newState: status },
+      LogStatus.SUCCESS,
+      undefined,
+      status,
+    );
     return hackathon;
   }
 
@@ -485,7 +524,16 @@ export class HackathonsService {
 
     hackathon.isMentorDistributed = true;
     await this.hackathonsRepository.save(hackathon);
-
+    await this.logActivity(
+      hackathonId,
+      ActivityType.MENTOR_ASSIGNMENT,
+      `Strategic Archon distribution completed for hackathon by Admin "${user.name}".`,
+      user,
+      { mentorCount: result.assignedSquads },
+      LogStatus.SUCCESS,
+      undefined,
+      hackathon.status,
+    );
     return result;
   }
 
@@ -1537,6 +1585,17 @@ export class HackathonsService {
     team.approvedById = user.id;
     await this.teamsRepository.save(team);
 
+    await this.logActivity(
+      team.hackathonId,
+      ActivityType.TEAM_APPROVED,
+      `Squad "${team.name}" cleared for deployment by Archon ${user.name}.`,
+      user,
+      { teamId: team.id, teamName: team.name, leader: team.lead?.name },
+      LogStatus.SUCCESS,
+      undefined,
+      'APPROVAL_PHASE',
+    );
+
     // Send Approval Email
     try {
       const teamMembers = await this.teamMembersRepository.find({
@@ -1622,6 +1681,17 @@ export class HackathonsService {
     team.rejectReason = reason;
     team.isLocked = true;
     await this.teamsRepository.save(team);
+
+    await this.logActivity(
+      team.hackathonId,
+      ActivityType.TEAM_REJECTED,
+      `Squad "${team.name}" deployment denied by Archon ${user.name}. Reason: ${reason}`,
+      user,
+      { teamId: team.id, teamName: team.name, reason },
+      LogStatus.SUCCESS,
+      undefined,
+      'APPROVAL_PHASE',
+    );
 
     // Send Rejection Email
     try {
@@ -1748,21 +1818,32 @@ export class HackathonsService {
     const team = await this.teamsRepository.findOne({ where: { id: teamId } });
     if (!team) throw new NotFoundException('Team not found');
 
-    // Check if user is member/lead of the team
-    const isMember = await this.teamMembersRepository.findOne({
-      where: { teamId, studentId: user.id },
-    });
-    if (!isMember && team.leadId !== user.id && user.role !== Role.ADMIN) {
-      throw new ForbiddenException(
-        'You are not authorized to submit for this squad',
-      );
-    }
-
     const round = await this.roundsRepository.findOne({
       where: { id: roundId },
     });
     if (!round)
       throw new NotFoundException('Mission parameters (round) not found');
+
+    const isMember = await this.teamMembersRepository.findOne({
+      where: { teamId, studentId: user.id },
+    });
+
+    // Check if user is member/lead of the team
+    if (!isMember && team.leadId !== user.id && user.role !== Role.ADMIN) {
+      await this.logActivity(
+        round.hackathonId,
+        ActivityType.UNAUTHORIZED_ACCESS,
+        `Unauthorized submission attempt for squad "${team.name}" by user "${user.name}". Access denied.`,
+        user,
+        { teamId, roundId, actorId: user.id },
+        LogStatus.BLOCKED,
+        roundId,
+        'SUBMISSION_ACTIVE',
+      );
+      throw new ForbiddenException(
+        'You are not authorized to submit for this squad',
+      );
+    }
 
     const hackathon = await this.hackathonsRepository.findOne({
       where: { id: round.hackathonId },
@@ -1839,6 +1920,16 @@ export class HackathonsService {
       });
 
       if (existingSubmission) {
+        await this.logActivity(
+          round.hackathonId,
+          ActivityType.SUBMISSION_BLOCKED,
+          `Resubmission attempt blocked for squad "${team?.name}". Strict "one submission" protocol enforced.`,
+          user,
+          { teamId, roundId, attempt: dto },
+          LogStatus.BLOCKED,
+          roundId,
+          hackathon.status,
+        );
         throw new BadRequestException(
           'Squad has already submitted for this mission. Resubmissions or edits are strictly prohibited.',
         );
@@ -1864,14 +1955,15 @@ export class HackathonsService {
       }
 
       // Log submission activity
-      const team = await manager
-        .getRepository(HackathonTeam)
-        .findOne({ where: { id: teamId } });
       await this.logActivity(
         round.hackathonId,
-        ActivityType.SUBMISSION,
-        `Squad "${team?.name || 'Unknown'}" submitted artifact for Round ${round.roundNumber}`,
-        user.id,
+        ActivityType.SUBMISSION_CREATED,
+        `Squad "${team?.name || 'Unknown'}" successfully submitted mission artifact for Round ${round.roundNumber}.`,
+        user,
+        { submissionId: saved.id, github: dto.githubLink, video: dto.videoUrl },
+        LogStatus.SUCCESS,
+        roundId,
+        hackathon.status,
       );
 
       return saved;
@@ -1953,18 +2045,52 @@ export class HackathonsService {
 
     await this.submissionsRepository.save(submission);
 
+    // Centralized Scoring: Create or update record in HackathonScore for aggregate visibility and multi-mentor support
+    let hackathonScore = await this.scoresRepository.findOne({
+      where: { submissionId, mentorId: user.id },
+    });
+
+    if (hackathonScore) {
+      hackathonScore.score = score;
+      hackathonScore.remarks = feedback;
+    } else {
+      hackathonScore = this.scoresRepository.create({
+        hackathonId: submission.hackathonId,
+        roundId: submission.roundId,
+        submissionId,
+        teamId: submission.teamId,
+        mentorId: user.id,
+        score,
+        remarks: feedback,
+      });
+    }
+    await this.scoresRepository.save(hackathonScore);
+
+    // Recalculate team-round aggregate score
+    await this.calculateAndSaveFinalScore(submissionId);
+
     await this.logActivity(
       submission.hackathonId,
-      ActivityType.SCORE_UPDATE,
-      `Archon "${user.name}" submitted evaluation for Squad "${submission.team?.name}" - Score: ${score}/10`,
-      user.id,
+      ActivityType.EVALUATION_SUBMITTED,
+      `Archon "${user.name}" finalized evaluation for Squad "${submission.team?.name}". Final Combat Score: ${score}/10`,
+      user,
+      { 
+        submissionId, 
+        teamId: submission.teamId, 
+        score, 
+        feedbackLength: feedback.length,
+        roundNumber: submission.round?.roundNumber 
+      },
+      LogStatus.SUCCESS,
+      submission.roundId,
+      submission.hackathon?.status,
     );
 
     // Notify Team Lead
     const team = submission.team;
     const lead = await this.usersRepository.findOne({
       where: { id: team.leadId },
-    }); // Assuming we can get lead details
+    }); 
 
     if (lead) {
       try {
@@ -1989,6 +2115,7 @@ export class HackathonsService {
     }
 
     return submission;
+
   }
 
   async submitScore(
@@ -2146,6 +2273,18 @@ export class HackathonsService {
     // Admin can force calculation and then apply eliminations
     await this.performRoundCalculation(roundId);
     await this.applyEliminationsAndPromotions(roundId);
+
+    await this.logActivity(
+      round.hackathonId,
+      ActivityType.ROUND_FINALIZATION,
+      `Mission "${round.title}" scouting phase finalized. Combat scores aggregated. Tactical promoting cycle complete.`,
+      'SYSTEM',
+      { roundId, roundTitle: round.title },
+      LogStatus.SUCCESS,
+      roundId,
+      round.hackathon?.status,
+    );
+
     return {
       message:
         'Round finalized. Leaderboard updated. Tactical survivors promoted.',
@@ -2512,7 +2651,7 @@ export class HackathonsService {
     });
 
     const approvedTeamsCount = await this.teamsRepository.count({
-      where: { hackathonId: id, status: TeamStatus.APPROVED },
+      where: { hackathonId: id, status: In([TeamStatus.APPROVED, TeamStatus.WINNER]) },
     });
     const rejectedTeamsCount = await this.teamsRepository.count({
       where: { hackathonId: id, status: TeamStatus.REJECTED },
@@ -2705,6 +2844,7 @@ export class HackathonsService {
       sortedRounds.map(async (round) => {
         const submissions = await this.submissionsRepository.find({
           where: { teamId, roundId: round.id },
+          relations: ['evaluatedBy'],
           order: { submittedAt: 'DESC' },
         });
 
@@ -2718,14 +2858,45 @@ export class HackathonsService {
     );
 
     // 3. Fetch Evaluations across all missions
-    const evaluations = await this.scoresRepository.find({
+    let evaluations = await this.scoresRepository.find({
       where: { teamId },
       relations: ['mentor', 'round'],
     });
 
+    // 3.5 Compatibility: Aggressively collect evaluations stored directly on submissions
+    const allSubmissions = await this.submissionsRepository.find({
+      where: { teamId },
+      relations: ['evaluatedBy', 'round'],
+      order: { submittedAt: 'DESC' }, // Process latest first
+    });
+
+    const seenRounds = new Set(evaluations.map((e) => e.roundId));
+
+    for (const sub of allSubmissions) {
+      if (sub.score !== null && sub.score !== undefined) {
+        // Only take the latest evaluation for each round if we don't already have one
+        if (!seenRounds.has(sub.roundId)) {
+          evaluations.push({
+            id: sub.id,
+            submissionId: sub.id,
+            mentorId: sub.evaluatedById,
+            mentor: sub.evaluatedBy,
+            score: Number(sub.score),
+            remarks: sub.feedback,
+            feedback: sub.feedback,
+            roundId: sub.roundId,
+            round: sub.round,
+            roundTitle: sub.round?.title || 'Unknown Mission',
+            createdAt: sub.evaluatedAt || sub.submittedAt,
+          } as any);
+          seenRounds.add(sub.roundId);
+        }
+      }
+    }
+
     // 4. Calculate Scoring Info
     const totalScore = evaluations.reduce(
-      (acc, curr) => acc + (curr.score || 0),
+      (acc, curr) => acc + Number(curr.score || 0),
       0,
     );
 

@@ -15,6 +15,7 @@ import { User } from '../../entities/user.entity';
 import { HackathonActivityLog } from '../../entities/hackathon-activity-log.entity';
 import { HackathonsService } from './hackathons.service';
 import { HackathonsController } from './hackathons.controller';
+import { HackathonsLoggingService } from './hackathons-logging.service';
 
 @Module({
   imports: [
@@ -35,7 +36,7 @@ import { HackathonsController } from './hackathons.controller';
     ]),
   ],
   controllers: [HackathonsController],
-  providers: [HackathonsService],
-  exports: [HackathonsService],
+  providers: [HackathonsService, HackathonsLoggingService],
+  exports: [HackathonsService, HackathonsLoggingService],
 })
 export class HackathonsModule {}

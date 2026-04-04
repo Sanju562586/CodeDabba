@@ -15,6 +15,7 @@ import { toast } from 'react-hot-toast';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Link from "next/link";
+import { HackathonTimelineTable } from "@/components/hackathons/HackathonTimelineTable";
 
 interface Team {
     id: string;
@@ -159,7 +160,7 @@ export default function MentorHackathonUnified() {
     };
 
     const pendingTeams = teams.filter(t => t.status === 'pending_approval');
-    const activeTeams = teams.filter(t => t.status === 'approved');
+    const activeTeams = teams.filter(t => ['approved', 'winner'].includes(t.status));
     const inactiveTeams = teams.filter(t => t.status === 'rejected' || t.status === 'eliminated');
 
     if (loading || !hackathon) return (
@@ -384,9 +385,9 @@ export default function MentorHackathonUnified() {
                                         <div className="flex justify-between items-start mb-12">
                                             <div>
                                                 <div className="flex items-center gap-3 mb-4">
-                                                    <span className={`w-2 h-2 rounded-full animate-ping ${selectedTeam.status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${selectedTeam.status === 'approved' ? 'text-emerald-500' : 'text-amber-500'}`}>
-                                                        {selectedTeam.status === 'approved' ? 'Active Duty' : 'Awaiting Clearance'}
+                                                    <span className={`w-2 h-2 rounded-full animate-ping ${['approved', 'winner'].includes(selectedTeam.status) ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${['approved', 'winner'].includes(selectedTeam.status) ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                                        {['approved', 'winner'].includes(selectedTeam.status) ? 'Active Duty' : 'Awaiting Clearance'}
                                                     </span>
                                                 </div>
                                                 <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none">{selectedTeam.name}</h2>
@@ -394,8 +395,8 @@ export default function MentorHackathonUnified() {
                                             </div>
                                         </div>
 
-                                        {/* If Approved, Show Grading UI */}
-                                        {selectedTeam.status === 'approved' && (
+                                        {/* If Approved or Winner, Show Grading UI */}
+                                        {['approved', 'winner'].includes(selectedTeam.status) && (
                                             <div className="mb-12 space-y-8">
                                                 <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-3xl">
                                                     <h4 className="text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-4 flex items-center justify-between">
@@ -577,6 +578,11 @@ export default function MentorHackathonUnified() {
                                             </div>
                                         ))}
                                     </div>
+                                </section>
+
+                                {/* Timeline Table */}
+                                <section>
+                                    <HackathonTimelineTable hackathon={hackathon} />
                                 </section>
 
                                 {/* Evaluation Criteria */}

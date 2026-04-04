@@ -153,16 +153,20 @@ export default function TeamDetailsPage() {
                         <div className="flex items-center gap-4">
                             <span className={`px-6 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-[0.2em] border transition-all flex items-center gap-2 ${
                                 team.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                team.status === 'winner' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                 team.status === 'pending_approval' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
                                 'bg-red-500/10 text-red-500 border-red-500/20'
                             }`}>
                                 <div className={`w-2 h-2 rounded-full ${
                                     team.status === 'approved' ? 'bg-green-500' :
+                                    team.status === 'winner' ? 'bg-amber-500' :
                                     team.status === 'pending_approval' ? 'bg-orange-500' :
                                     'bg-red-500'
                                 }`}></div>
                                 {team.status === 'pending_approval' ? 'Pending' :
-                                 team.status === 'approved' ? 'Approved' : 'Eliminated'}
+                                 team.status === 'winner' ? (team.hackathon?.status?.toUpperCase() === 'COMPLETED' ? 'Winner (Hackathon Completed)' : 'Winner') :
+                                 team.status === 'approved' ? (team.hackathon?.status?.toUpperCase() === 'COMPLETED' ? 'Approved (Hackathon Completed)' : 'Approved') : 
+                                 (team.hackathon?.status?.toUpperCase() === 'COMPLETED' ? 'Eliminated (Hackathon Completed)' : 'Eliminated')}
                             </span>
                         </div>
                     </div>
@@ -221,9 +225,7 @@ export default function TeamDetailsPage() {
                             {/* TABS HEADER */}
                             <div className="flex gap-2 p-1.5 bg-zinc-900/50 border border-zinc-800 rounded-2xl w-fit">
                                 {[
-                                    { id: 'submissions', label: 'Submissions', icon: Layout },
-                                    { id: 'evaluation', label: 'Evaluation', icon: MessageSquare },
-                                    { id: 'scores', label: 'Scores', icon: Trophy },
+                                    { id: 'submissions', label: 'Mission Hub', icon: Layout },
                                     { id: 'status', label: 'Status', icon: Shield }
                                 ].map(tab => (
                                     <button
@@ -246,6 +248,7 @@ export default function TeamDetailsPage() {
                                 {activeTab === 'submissions' && (
                                     <SubmissionsTab 
                                         rounds={team.roundsData} 
+                                        stats={team.scoringInfo}
                                         onEvaluate={(subId: string) => {
                                             setEvaluatingSubId(subId);
                                             setEvalScore(5);
@@ -255,8 +258,6 @@ export default function TeamDetailsPage() {
                                         canEvaluate={canEvaluateBase}
                                     />
                                 )}
-                                {activeTab === 'evaluation' && <EvaluationTab evaluations={team.evaluations} />}
-                                {activeTab === 'scores' && <ScoresTab stats={team.scoringInfo} />}
                                 {activeTab === 'status' && <StatusTab team={team} onApprove={handleApprove} onReject={handleReject} canAction={canAction} />}
                             </div>
                         </div>
@@ -338,14 +339,27 @@ function SectionHeader({ icon: Icon, label }: any) {
     );
 }
 
-function SubmissionsTab({ rounds, onEvaluate, canEvaluate }: { rounds: any[], onEvaluate: (id: string) => void, canEvaluate: boolean }) {
+function SubmissionsTab({ rounds, stats, onEvaluate, canEvaluate }: { rounds: any[], stats: any, onEvaluate: (id: string) => void, canEvaluate: boolean }) {
     if (!rounds || rounds.length === 0) return <EmptyTab icon={FileText} message="No missions logged in deployment logs." />;
+
+    const s = stats || { roundScore: 0, weightedScore: 0, totalScore: 0 };
 
     return (
         <div className="space-y-12">
+            {/* 1. Performance Overview - Single Large Cumulative Score */}
+            <div className="bg-zinc-900/50 border border-zinc-800 p-12 rounded-[2.5rem] flex flex-col items-center text-center relative overflow-hidden group shadow-2xl">
+                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent opacity-20"></div>
+                 <Trophy className="w-8 h-8 mb-4 text-pink-500 opacity-40 transition-transform group-hover:scale-110" />
+                 <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] mb-4">Total Protocol Points (All Rounds)</p>
+                 <div className="text-8xl font-black text-pink-500 tracking-tighter transition-transform duration-500 group-hover:scale-105">
+                    {s.totalScore?.toFixed(1) || '0.0'}
+                 </div>
+                 <div className="mt-8 h-1 w-24 bg-zinc-800 rounded-full group-hover:w-48 transition-all duration-500"></div>
+            </div>
+
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
                 <span className="text-[10px] font-black text-pink-500 uppercase tracking-widest flex items-center gap-2">
-                    <Shield className="w-4 h-4" /> Full historical visibility enabled
+                    <Shield className="w-4 h-4" /> Tactical visibility engaged. All submission cycles synchronized.
                 </span>
             </div>
             {rounds.map((round: any, rIdx: number) => (
@@ -381,38 +395,66 @@ function SubmissionsTab({ rounds, onEvaluate, canEvaluate }: { rounds: any[], on
                                 
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Version & Intel</p>
-                                            <div className="flex items-center gap-3 mt-1">
-                                                <p className="text-xl font-black text-white">RECORD</p>
-                                                <div className={`px-2 py-0.5 rounded text-[8px] font-black border uppercase tracking-widest ${
-                                                    sub.score ? 'bg-pink-500/10 text-pink-500 border-pink-500/30' : 'bg-zinc-800 text-zinc-600 border-zinc-700'
-                                                }`}>
-                                                    {sub.score ? `${sub.score.toFixed(1)} Combat Pts` : 'Pending Score'}
-                                                </div>
+                                        <div className="flex items-center gap-6">
+                                            <div className="px-6 py-3 rounded-2xl bg-zinc-950 border border-zinc-800 shadow-inner flex flex-col items-center group-hover:border-pink-500/20 transition-all duration-500">
+                                                <p className="text-[7px] font-black text-zinc-600 uppercase tracking-widest mb-1">Combat Rating</p>
+                                                <p className={`text-2xl font-black ${sub.score ? 'text-pink-500' : 'text-zinc-800'}`}>
+                                                    {sub.score ? sub.score.toFixed(1) : '---'}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h5 className="text-[14px] font-black text-white uppercase tracking-tight flex items-center gap-3">
+                                                    RECORD 
+                                                    <span className={`text-[8px] px-2 py-0.5 rounded border font-black tracking-[0.2em] ${
+                                                        sub.score ? 'bg-pink-600/20 text-pink-500 border-pink-500/30' : 'bg-zinc-800 text-zinc-600 border-zinc-700 opacity-50'
+                                                    }`}>
+                                                        {sub.score ? 'VERIFIED' : 'PENDING'}
+                                                    </span>
+                                                </h5>
+                                                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">MISSION ARTIFACT #{sub.id.split('-')[0]}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Timestamp</p>
-                                            <p className="text-[11px] font-bold text-zinc-400 mt-1">{new Date(sub.createdAt).toLocaleString()}</p>
+                                            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Protocol Timestamp</p>
+                                            <p className="text-[11px] font-bold text-zinc-400 mt-1">
+                                                {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : 
+                                                 (sub.createdAt ? new Date(sub.createdAt).toLocaleString() : 'N/A')}
+                                            </p>
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col gap-4 py-4 border-t border-zinc-800/50">
-                                        {sub.description && (
-                                            <div>
-                                                <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Mission Intel</p>
-                                                <p className="text-[11px] text-zinc-400 font-bold leading-relaxed">{sub.description}</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6 border-y border-zinc-800/80 p-6 bg-zinc-950/20 rounded-[2.5rem]">
+                                        {/* Deployment Intel (Description) */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-zinc-700"></div>
+                                                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.3em]">Deployment Intel (Mission Artifact Report)</p>
                                             </div>
-                                        )}
-                                        {sub.feedback && (
-                                            <div className="bg-pink-500/5 border border-pink-500/10 rounded-xl p-4">
-                                                <p className="text-[9px] font-black text-pink-500/60 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                    <MessageSquare className="w-3 h-3" /> Archon Feedback
+                                            <p className="text-[12px] text-zinc-400 font-bold leading-relaxed border-l-2 border-zinc-800/50 pl-4 py-1 italic">
+                                                {sub.description || 'No operational intel provided with this artifact submission.'}
+                                            </p>
+                                        </div>
+                                        
+                                        {/* Strategic Feedback (Mentor) */}
+                                        <div className={`p-6 rounded-[2rem] space-y-4 transition-all duration-500 ${
+                                            sub.feedback 
+                                                ? 'bg-pink-600/5 border border-pink-500/20 shadow-lg shadow-pink-500/5' 
+                                                : 'bg-zinc-950/40 border border-zinc-800 border-dashed opacity-40 hover:opacity-100 hover:border-zinc-700 hover:bg-zinc-800/10'
+                                        }`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${sub.feedback ? 'bg-pink-500' : 'bg-zinc-800'}`}></div>
+                                                <p className={`text-[8px] font-black uppercase tracking-[0.3em] ${sub.feedback ? 'text-pink-500' : 'text-zinc-700'}`}>Archon Strategic Review</p>
+                                            </div>
+                                            {sub.feedback ? (
+                                                <p className="text-[12px] text-white font-black leading-relaxed italic border-l-2 border-pink-500/30 pl-4">
+                                                    "{sub.feedback}"
                                                 </p>
-                                                <p className="text-[11px] text-pink-500 font-black italic">"{sub.feedback}"</p>
-                                            </div>
-                                        )}
+                                            ) : (
+                                                <p className="text-[11px] text-zinc-700 font-bold italic pl-4">
+                                                    Scoring cycle in progress. Feedback pending Archon review.
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="flex flex-wrap gap-2 pt-4 border-t border-zinc-800">
@@ -462,64 +504,7 @@ function SubmissionsTab({ rounds, onEvaluate, canEvaluate }: { rounds: any[], on
     );
 }
 
-function EvaluationTab({ evaluations }: { evaluations: any[] }) {
-    if (!evaluations || evaluations.length === 0) return <EmptyTab icon={MessageSquare} message="No evaluations recorded from Archon Council." />;
 
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {evaluations.map((ev: any, idx: number) => (
-                <div key={idx} className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-xl hover:border-indigo-500/30 transition-all">
-                    <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-xs font-black text-zinc-500 border border-zinc-700">
-                                {ev.mentor?.name?.charAt(0)}
-                            </div>
-                            <div>
-                                <p className="text-[12px] font-black text-white uppercase tracking-tight">{ev.mentor?.name}</p>
-                                <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em] mt-0.5">Assigned Archon</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Score</p>
-                            <p className="text-2xl font-black text-white tracking-tighter mt-1">{ev.score}<span className="text-zinc-600 text-[10px] lowercase">/10</span></p>
-                        </div>
-                    </div>
-                    
-                    <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-6">
-                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <MessageSquare className="w-3 h-3" /> Intel Report
-                        </p>
-                        <p className="text-xs text-zinc-400 leading-relaxed italic">"{ev.remarks || ev.feedback}"</p>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function ScoresTab({ stats }: { stats: any }) {
-    const defaultStats = { roundScore: 0, weightedScore: 0, totalScore: 0 };
-    const s = stats || defaultStats;
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-                { label: 'Round Final Score', value: s.roundScore, color: 'text-white' },
-                { label: 'Weighted Impact', value: s.weightedScore, color: 'text-indigo-500' },
-                { label: 'Cumulative Score', value: s.totalScore, color: 'text-pink-500' }
-            ].map((stat, idx) => (
-                <div key={idx} className="bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem] flex flex-col items-center text-center shadow-2xl relative group overflow-hidden">
-                    <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-10 ${stat.color}`}></div>
-                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6">{stat.label}</p>
-                    <div className={`text-6xl font-black tracking-tighter transition-transform group-hover:scale-110 duration-500 ${stat.color}`}>
-                        {stat.value?.toFixed(1) || '0.0'}
-                    </div>
-                    <p className="text-[8px] font-black text-zinc-800 uppercase tracking-[0.5em] mt-6">Protocol Standings</p>
-                </div>
-            ))}
-        </div>
-    );
-}
 
 function StatusTab({ team, onApprove, onReject, canAction }: { team: any, onApprove: () => void, onReject: (r: string) => void, canAction: boolean }) {
     const [showRejectForm, setShowRejectForm] = useState(false);
@@ -529,6 +514,7 @@ function StatusTab({ team, onApprove, onReject, canAction }: { team: any, onAppr
         <div className="max-w-2xl mx-auto space-y-8">
             <div className={`p-12 border rounded-[3rem] shadow-2xl text-center space-y-8 overflow-hidden relative ${
                 team.status === 'approved' ? 'bg-green-500/5 border-green-500/20' :
+                team.status === 'winner' ? 'bg-amber-500/5 border-amber-500/20' :
                 team.status === 'pending_approval' ? 'bg-orange-500/5 border-orange-500/20' :
                 'bg-red-500/5 border-red-500/20'
             }`}>
@@ -539,10 +525,12 @@ function StatusTab({ team, onApprove, onReject, canAction }: { team: any, onAppr
                 <div className="relative z-10 flex flex-col items-center">
                     <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-8 shadow-2xl transition-transform hover:scale-110 duration-500 ${
                         team.status === 'approved' ? 'bg-green-500 shadow-green-500/20' :
+                        team.status === 'winner' ? 'bg-amber-500 shadow-amber-500/20' :
                         team.status === 'pending_approval' ? 'bg-orange-500 shadow-orange-500/20' :
                         'bg-red-500 shadow-red-500/20'
                     }`}>
                         {team.status === 'approved' ? <CheckCircle2 className="w-12 h-12 text-white" /> :
+                         team.status === 'winner' ? <Trophy className="w-12 h-12 text-white" /> :
                          team.status === 'pending_approval' ? <Clock className="w-12 h-12 text-white" /> :
                          <XCircle className="w-12 h-12 text-white" />}
                     </div>
@@ -550,11 +538,14 @@ function StatusTab({ team, onApprove, onReject, canAction }: { team: any, onAppr
                     <p className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.5em] mb-4">Deployment Protocol Status</p>
                     <h4 className={`text-5xl font-black uppercase tracking-tighter mb-4 ${
                         team.status === 'approved' ? 'text-green-500' :
+                        team.status === 'winner' ? 'text-amber-500' :
                         team.status === 'pending_approval' ? 'text-orange-500' :
                         'text-red-500'
                     }`}>
                         {team.status === 'pending_approval' ? 'Awaiting Clearance' :
-                         team.status === 'approved' ? 'Active Operative' : 'Legion Eliminated'}
+                         team.status === 'winner' ? (team.hackathon?.status?.toUpperCase() === 'COMPLETED' ? 'Winner (Hackathon Completed)' : 'Winner') :
+                         team.status === 'approved' ? (team.hackathon?.status?.toUpperCase() === 'COMPLETED' ? 'Approved (Hackathon Completed)' : 'Approved') : 
+                         (team.hackathon?.status?.toUpperCase() === 'COMPLETED' ? 'Eliminated (Hackathon Completed)' : 'Eliminated')}
                     </h4>
 
                     {team.status === 'pending_approval' && !showRejectForm && (
