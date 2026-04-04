@@ -1,0 +1,7 @@
+﻿src/app/mentor/dashboard/hackathons/[id]/page.tsx(254,18): error TS17008: JSX element 'main' has no corresponding closing tag.
+src/app/mentor/dashboard/hackathons/[id]/page.tsx(376,29): error TS1005: ')' expected.
+src/app/mentor/dashboard/hackathons/[id]/page.tsx(623,22): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/app/mentor/dashboard/hackathons/[id]/page.tsx(624,19): error TS17002: Expected corresponding JSX closing tag for 'ProtectedRoute'.
+src/app/mentor/dashboard/hackathons/[id]/page.tsx(625,13): error TS1005: ')' expected.
+src/app/mentor/dashboard/hackathons/[id]/page.tsx(626,9): error TS1109: Expression expected.
+src/app/mentor/dashboard/hackathons/[id]/page.tsx(627,5): error TS1109: Expression expected.
