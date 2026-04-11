@@ -88,6 +88,8 @@ export default function CreateHackathonPage() {
             isPaymentRequired: false,
             paymentAmount: '',
             paymentDeadline: '',
+            paymentDeadlineType: 'custom' as 'submissionStart' | 'teamFormation' | 'approvalPhase' | 'custom',
+            paymentDeadlineDate: '',
             paymentType: 'ALL_TEAMS'
         }
     ]);
@@ -114,8 +116,10 @@ export default function CreateHackathonPage() {
             isPaymentRequired: false,
             paymentAmount: '',
             paymentDeadline: '',
+            paymentDeadlineType: 'custom' as 'submissionStart' | 'teamFormation' | 'approvalPhase' | 'custom',
+            paymentDeadlineDate: '',
             paymentType: 'ALL_TEAMS'
-        }]);
+        }]);}
     };
 
     const handleRemoveRound = (index: number) => {
