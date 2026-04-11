@@ -1,3 +1,9 @@
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
+
 export const loadRazorpay = () => {
     return new Promise((resolve) => {
         if (window.Razorpay) {

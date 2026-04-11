@@ -111,7 +111,7 @@ export default function TeamDashboard() {
                 roundId: data.currentRound.id
             });
             if (res.data.status === 'success' || res.data.payment) {
-                handlePayment(res.data.payment.id, `Round ${data.currentRound.roundNumber} Fee`, user?.name, user?.email);
+                handlePayment(res.data.payment.id, `Round ${data.currentRound.roundNumber} Fee`, user?.name || 'User', user?.email || 'user@example.com');
             }
         } catch (error: any) {
              toast.error(error.response?.data?.message || "Failed to initiate payment");
@@ -502,7 +502,7 @@ export default function TeamDashboard() {
                                                     )}
                                                     {payment.status === 'PENDING' && (
                                                         <button 
-                                                            onClick={() => handlePayment(payment.id, 'Retry Requisition', user?.name, user?.email)}
+                                                            onClick={() => handlePayment(payment.id, 'Retry Requisition', user?.name || 'User', user?.email || 'user@example.com')}
                                                             disabled={isProcessing}
                                                             className="text-[10px] text-white font-black uppercase tracking-widest px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg transition-colors"
                                                         >
