@@ -233,7 +233,8 @@ export class CertificatesService {
           .text(`Issued on ${dateStr}`, width - 260, height - 70, { width: 200, align: 'right' });
 
         try {
-            const qrData = `https://codedabba.com/verify/certificate/${certId}`;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+            const qrData = `${frontendUrl}/verify/certificate/${certId}`;
             const qrImage = await QRCode.toDataURL(qrData);
             doc.image(qrImage, 60, height - 160, { width: 50 });
         } catch (e) {
