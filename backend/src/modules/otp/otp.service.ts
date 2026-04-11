@@ -101,7 +101,7 @@ export class OtpService {
 
     try {
       await resend.emails.send({
-        from: 'CodeDabba <onboarding@resend.dev>',
+        from: 'hello.codedabba@gmail.com',
         to: email,
         subject: `${type} Verification OTP - CodeDabba`,
         html: `<div style="font-family: Arial, sans-serif; padding: 20px;"><h2>CodeDabba Verification</h2><p>Your OTP for ${type.toLowerCase().replace('_', ' ')} is:</p><h1 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h1><p>This OTP is valid for 10 minutes.</p><p>If you did not request this, please ignore this email.</p></div>`,
