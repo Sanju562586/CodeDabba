@@ -31,6 +31,8 @@ interface Round {
     isPaymentRequired: boolean;
     paymentAmount: number | string;
     paymentDeadline: string;
+    paymentDeadlineType: 'submissionStart' | 'teamFormation' | 'approvalPhase' | 'custom';
+    paymentDeadlineDate: string;
     paymentType: 'ALL_TEAMS' | 'QUALIFIED_ONLY';
 }
 
