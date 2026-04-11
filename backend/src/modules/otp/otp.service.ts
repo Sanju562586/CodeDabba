@@ -6,8 +6,6 @@ import { MoreThan, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY || '');
-
 @Injectable()
 export class OtpService {
   private readonly logger = new Logger(OtpService.name);
@@ -93,10 +91,13 @@ export class OtpService {
   private async sendOtpEmail(email: string, otp: string, type: string) {
     console.log(`[OTP SERVICE] Attempting to send ${type} OTP to ${email}`);
 
-    if (!process.env.RESEND_API_KEY) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
       this.logger.error('Missing RESEND_API_KEY environment variable');
       throw new BadRequestException('Email service is not configured');
     }
+
+    const resend = new Resend(apiKey);
 
     try {
       await resend.emails.send({
