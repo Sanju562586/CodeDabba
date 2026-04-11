@@ -85,10 +85,8 @@ export default function CreateHackathonPage() {
             allowedFileTypes: ['ppt', 'pptx'],
             isPaymentRequired: false,
             paymentAmount: '',
-            paymentDeadlineType: 'custom' as 'submissionStart' | 'custom',
-            paymentDeadlineDate: '',
-            paymentType: 'ALL_TEAMS',
-            refundAllowed: false
+            paymentDeadline: '',
+            paymentType: 'ALL_TEAMS'
         }
     ]);
 
@@ -113,10 +111,8 @@ export default function CreateHackathonPage() {
             allowedFileTypes: ['ppt', 'pptx'],
             isPaymentRequired: false,
             paymentAmount: '',
-            paymentDeadlineType: 'custom',
-            paymentDeadlineDate: '',
-            paymentType: 'ALL_TEAMS',
-            refundAllowed: false
+            paymentDeadline: '',
+            paymentType: 'ALL_TEAMS'
         }]);
     };
 
