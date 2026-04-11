@@ -16,8 +16,12 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
+    : ['http://localhost:3000', 'http://localhost:3001', 'https://code-dabba.vercel.app'];
+
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'https://code-dabba.vercel.app'],
+    origin: allowedOrigins,
     credentials: true,
   });
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
