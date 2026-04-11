@@ -52,7 +52,7 @@ export default function LandingPage() {
                             <ul className="space-y-2 text-sm text-zinc-400">
                                 <li><Link href="/courses" className="hover:text-white transition-colors">Courses</Link></li>
                                 <li><Link href="#" className="hover:text-white transition-colors">Mentorship</Link></li>
-                                <li><Link href="#" className="hover:text-white transition-colors">Pricing</Link></li>
+                                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
                             </ul>
                         </div>
                         <div>
