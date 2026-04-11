@@ -2,9 +2,11 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Otp, OtpType } from '../../entities/otp.entity';
-import { MailerService } from '@nestjs-modules/mailer';
 import { MoreThan, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 @Injectable()
 export class OtpService {
@@ -13,7 +15,6 @@ export class OtpService {
   constructor(
     @InjectRepository(Otp)
     private otpRepository: Repository<Otp>,
-    private readonly mailerService: MailerService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -91,35 +92,23 @@ export class OtpService {
 
   private async sendOtpEmail(email: string, otp: string, type: string) {
     console.log(`[OTP SERVICE] Attempting to send ${type} OTP to ${email}`);
-    console.log(`[OTP SERVICE] Mail config - Host: ${process.env.MAIL_HOST}, Port: ${process.env.MAIL_PORT}, User: ${process.env.MAIL_USER ? '***' : 'NOT SET'}`);
+
+    if (!process.env.RESEND_API_KEY) {
+      this.logger.error('Missing RESEND_API_KEY environment variable');
+      throw new BadRequestException('Email service is not configured');
+    }
 
     try {
-      await this.mailerService.sendMail({
+      await resend.emails.send({
+        from: 'onboarding@resend.dev',
         to: email,
         subject: `${type} Verification OTP - CodeDabba`,
-        html: `
-                    <div style="font-family: Arial, sans-serif; padding: 20px;">
-                        <h2>CodeDabba Verification</h2>
-                        <p>Your OTP for ${type.toLowerCase().replace('_', ' ')} is:</p>
-                        <h1 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h1>
-                        <p>This OTP is valid for 10 minutes.</p>
-                        <p>If you did not request this, please ignore this email.</p>
-                    </div>
-                `,
+        html: `<div style="font-family: Arial, sans-serif; padding: 20px;"><h2>CodeDabba Verification</h2><p>Your OTP for ${type.toLowerCase().replace('_', ' ')} is:</p><h1 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h1><p>This OTP is valid for 10 minutes.</p><p>If you did not request this, please ignore this email.</p></div>`,
       });
       console.log(`[OTP SERVICE] ✅ Email sent successfully to ${email}`);
     } catch (error) {
-      console.error('[OTP SERVICE] ❌ Failed to send OTP email:', error);
-      console.error('[OTP SERVICE] Error details:', {
-        message: error.message,
-        code: error.code,
-        errno: error.errno,
-        syscall: error.syscall,
-        hostname: error.hostname
-      });
-      throw new BadRequestException(
-        `Failed to send OTP email: ${error.message}`,
-      );
+      console.error('[OTP SERVICE] ❌ Email error:', error);
+      throw new BadRequestException('Failed to send OTP email');
     }
   }
 }

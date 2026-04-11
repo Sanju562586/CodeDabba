@@ -33,6 +33,8 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
 
   - type: web
     name: codedabba-frontend
