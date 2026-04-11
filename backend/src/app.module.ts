@@ -55,20 +55,37 @@ import { PaymentsModule } from './modules/payments/payments.module';
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        transport: {
-          host: configService.get('MAIL_HOST'), // e.g., smtp.gmail.com
-          port: 587,
-          secure: false, // true for 465, false for other ports
-          auth: {
-            user: configService.get('MAIL_USER'),
-            pass: configService.get('MAIL_PASSWORD'),
+      useFactory: async (configService: ConfigService) => {
+        const mailConfig = {
+          transport: {
+            host: configService.get('MAIL_HOST', 'smtp.gmail.com'),
+            port: parseInt(configService.get('MAIL_PORT', '587')),
+            secure: false, // true for 465, false for other ports
+            family: 4, // Force IPv4 (fixes Render deployment issues)
+            auth: {
+              user: configService.get('MAIL_USER'),
+              pass: configService.get('MAIL_PASSWORD'),
+            },
+            // Add timeout and connection settings for production
+            connectionTimeout: 60000,
+            greetingTimeout: 30000,
+            socketTimeout: 60000,
           },
-        },
-        defaults: {
-          from: `"CodeDabba" <${configService.get('MAIL_FROM')}>`,
-        },
-      }),
+          defaults: {
+            from: configService.get('MAIL_FROM', `"CodeDabba" <noreply@codedabba.com>`),
+          },
+        };
+
+        console.log('[MAILER CONFIG] Initializing with:', {
+          host: mailConfig.transport.host,
+          port: mailConfig.transport.port,
+          secure: mailConfig.transport.secure,
+          user: mailConfig.transport.auth.user ? '***' : 'NOT SET',
+          from: mailConfig.defaults.from,
+        });
+
+        return mailConfig;
+      },
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

@@ -90,7 +90,9 @@ export class OtpService {
   }
 
   private async sendOtpEmail(email: string, otp: string, type: string) {
-    console.log(`[DEV ONLY] Generated OTP for ${email}: ${otp}`); // For debugging/dev without email setup
+    console.log(`[OTP SERVICE] Attempting to send ${type} OTP to ${email}`);
+    console.log(`[OTP SERVICE] Mail config - Host: ${process.env.MAIL_HOST}, Port: ${process.env.MAIL_PORT}, User: ${process.env.MAIL_USER ? '***' : 'NOT SET'}`);
+
     try {
       await this.mailerService.sendMail({
         to: email,
@@ -105,14 +107,16 @@ export class OtpService {
                     </div>
                 `,
       });
+      console.log(`[OTP SERVICE] ✅ Email sent successfully to ${email}`);
     } catch (error) {
-      console.error('Error sending OTP email:', error);
-      // In a real app we might throw, but for dev if email config is wrong we might want to let it pass if we see the log.
-      // However, the user asked for a flow where backend generates OTP.
-      // If we throw here, the frontend gets 400.
-      // Let's throw for now to force correct config, but user might be stuck if they didn't add env vars.
-      // throw new BadRequestException('Failed to send OTP email');
-      // EDIT: Retrowing to ensure user knows email failed.
+      console.error('[OTP SERVICE] ❌ Failed to send OTP email:', error);
+      console.error('[OTP SERVICE] Error details:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        hostname: error.hostname
+      });
       throw new BadRequestException(
         `Failed to send OTP email: ${error.message}`,
       );

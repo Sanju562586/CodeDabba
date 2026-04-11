@@ -18,7 +18,9 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         value: "https://codedabba-frontend.onrender.com"
       - key: MAIL_HOST
-        sync: false
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
       - key: MAIL_USER
         sync: false
       - key: MAIL_PASSWORD
