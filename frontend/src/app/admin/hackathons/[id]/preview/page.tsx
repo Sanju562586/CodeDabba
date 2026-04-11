@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
 import { NavBar } from "@/components/landing/NavBar";
-import { Loader2, Calendar, Users, ListChecks, ArrowLeft, Trophy, ShieldAlert, Clock, Github, Video, FileArchive, MessageCircle } from "lucide-react";
+import { Loader2, Calendar, Users, ListChecks, ArrowLeft, Trophy, ShieldAlert, Clock, Github, Video, FileText, MessageCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
