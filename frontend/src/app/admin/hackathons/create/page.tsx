@@ -34,6 +34,7 @@ interface Round {
     paymentDeadlineType: 'submissionStart' | 'teamFormation' | 'approvalPhase' | 'custom';
     paymentDeadlineDate: string;
     paymentType: 'ALL_TEAMS' | 'QUALIFIED_ONLY';
+    refundAllowed: boolean;
 }
 
 export default function CreateHackathonPage() {
@@ -90,7 +91,8 @@ export default function CreateHackathonPage() {
             paymentDeadline: '',
             paymentDeadlineType: 'custom' as 'submissionStart' | 'teamFormation' | 'approvalPhase' | 'custom',
             paymentDeadlineDate: '',
-            paymentType: 'ALL_TEAMS'
+            paymentType: 'ALL_TEAMS',
+            refundAllowed: false
         }
     ]);
 
@@ -118,8 +120,9 @@ export default function CreateHackathonPage() {
             paymentDeadline: '',
             paymentDeadlineType: 'custom' as 'submissionStart' | 'teamFormation' | 'approvalPhase' | 'custom',
             paymentDeadlineDate: '',
-            paymentType: 'ALL_TEAMS'
-        }]);}
+            paymentType: 'ALL_TEAMS',
+            refundAllowed: false
+        }]);
     };
 
     const handleRemoveRound = (index: number) => {
