@@ -9,7 +9,7 @@ import {
     Loader2, ArrowLeft, Users, Shield, CheckCircle,
     XCircle, Info, Activity, Globe, MessageSquare,
     ExternalLink, Trash2, ShieldAlert, Zap, Calendar,
-    Trophy, Clock, Github, Video, FileArchive, MessageCircle, ChevronRight, Archive
+    Trophy, Clock, Github, Video, FileArchive, FileText, MessageCircle, ChevronRight, Archive
 } from "lucide-react";
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from "react-markdown";
@@ -43,7 +43,7 @@ interface Round {
     status: string;
     isElimination: boolean;
     weightagePercentage: number;
-    allowZip: boolean;
+    allowDocument: boolean;
     allowGithub: boolean;
     allowVideo: boolean;
     allowDescription: boolean;
@@ -419,8 +419,8 @@ export default function MentorHackathonUnified() {
                                                                         {sub.githubLink && (
                                                                             <a href={sub.githubLink} target="_blank" className="text-[10px] text-zinc-500 hover:text-white flex items-center gap-2"><Github className="w-3 h-3" /> Code</a>
                                                                         )}
-                                                                        {sub.zipUrl && (
-                                                                            <a href={sub.zipUrl} target="_blank" className="text-[10px] text-zinc-500 hover:text-white flex items-center gap-2"><FileArchive className="w-3 h-3" /> Package</a>
+                                                                        {sub.documentUrl && (
+                                                                            <a href={sub.documentUrl} target="_blank" className="text-[10px] text-zinc-500 hover:text-white flex items-center gap-2"><FileText className="w-3 h-3" /> Document</a>
                                                                         )}
                                                                         {sub.videoUrl && (
                                                                             <a href={sub.videoUrl} target="_blank" className="text-[10px] text-zinc-500 hover:text-white flex items-center gap-2"><Video className="w-3 h-3" /> Briefing</a>

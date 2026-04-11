@@ -21,8 +21,8 @@ export class SubmitRoundDto {
   @IsUrl()
   videoUrl?: string;
 
-  // zipUrl is handled via file upload if present
+  // documentUrl is handled via file upload if present
   @IsOptional()
   @IsString()
-  zipUrl?: string;
+  documentUrl?: string;
 }

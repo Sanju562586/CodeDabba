@@ -5,6 +5,7 @@ import {
   Param,
   UseGuards,
   Request,
+  Res,
   NotFoundException,
 } from '@nestjs/common';
 import { AuthGuard } from '../../common/guards/auth.guard';
@@ -20,6 +21,12 @@ export class CertificatesController {
     return await this.certificatesService.generate(req.user.id, hackathonId);
   }
 
+  @Post('course/:courseId')
+  @UseGuards(AuthGuard)
+  async generateCourseCertificate(@Request() req: any, @Param('courseId') courseId: string) {
+    return await this.certificatesService.generateCourseCertificate(req.user.id, courseId);
+  }
+
   @Get('my')
   @UseGuards(AuthGuard)
   async getMyCertificates(@Request() req: any) {
@@ -32,5 +39,10 @@ export class CertificatesController {
     const cert = await this.certificatesService.verify(id);
     if (!cert) throw new NotFoundException('Certification record not verified in registry.');
     return cert;
+  }
+
+  @Get(':id/download')
+  async downloadCertificate(@Param('id') id: string, @Res() res: any) {
+     return await this.certificatesService.streamCertificatePDF(id, res);
   }
 }

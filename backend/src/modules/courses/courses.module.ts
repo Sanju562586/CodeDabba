@@ -9,6 +9,7 @@ import { MentorProfile } from '../../entities/mentor-profile.entity';
 import { LessonBlock } from '../../entities/lesson-block.entity';
 import { Enrollment } from '../../entities/enrollment.entity';
 import { Progress } from '../../entities/progress.entity';
+import { CertificatesModule } from '../certificates/certificates.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { Progress } from '../../entities/progress.entity';
       Enrollment,
       Progress,
     ]),
+    CertificatesModule,
   ],
   providers: [CoursesService],
   controllers: [CoursesController],

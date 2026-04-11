@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { NavBar } from "@/components/landing/NavBar";
+import { useAuth } from "@/context/AuthProvider";
+import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
 import api from "@/lib/axios";
 import { Loader2, BookOpen, CheckCircle, Lock, PlayCircle, FileText, Code } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -27,10 +29,17 @@ export default function CourseDetailPage() {
     const params = useParams();
     const router = useRouter();
     const courseId = params.courseId as string;
+    const { user } = useAuth();
 
     const [course, setCourse] = useState<Course | null>(null);
     const [loading, setLoading] = useState(true);
     const [enrolling, setEnrolling] = useState(false);
+    const [paymentId, setPaymentId] = useState<string | null>(null);
+
+    const { handlePayment } = useRazorpayPayment(() => {
+        toast.success("Payment completed! You are now enrolled.");
+        fetchCourse();
+    });
 
     useEffect(() => {
         fetchCourse();
@@ -49,15 +58,34 @@ export default function CourseDetailPage() {
     };
 
     const handleEnroll = async () => {
-        if (!course) return;
+        if (!course || !user) {
+            toast.error("Please login to enroll");
+            router.push('/login');
+            return;
+        }
         setEnrolling(true);
         try {
-            await api.post(`/courses/${course.id}/enroll`);
-            toast.success("Enrolled successfully!");
-            // Refresh course to get updated enrollment status
-            fetchCourse();
-            // Or redirect to learn page
-            // router.push(`/learn/${course.id}`);
+            if (course.accessType === 'paid') {
+                // Create payment for paid course
+                const { data: paymentRes } = await api.post('/payments/course', { courseId: course.id });
+                if (paymentRes.status === 'success') {
+                    setPaymentId(paymentRes.payment.id);
+                    // Start Razorpay payment
+                    await handlePayment(
+                        paymentRes.payment.id,
+                        course.title,
+                        user.name || user.email,
+                        user.email
+                    );
+                } else {
+                    toast.error("Failed to create payment");
+                }
+            } else {
+                // Free course - enroll directly
+                await api.post(`/courses/${course.id}/enroll`);
+                toast.success("Enrolled successfully!");
+                fetchCourse();
+            }
         } catch (error: any) {
             console.error("Enrollment failed", error);
             if (error.response?.status === 401) {

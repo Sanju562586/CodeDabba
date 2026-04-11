@@ -242,19 +242,20 @@ export default function StudentDashboard() {
                                                 </div>
                                                 <span className="text-[9px] font-mono text-zinc-600 tracking-tighter">{cert.certificateId}</span>
                                             </div>
-                                            <h3 className="text-xl font-black italic uppercase italic tracking-tight text-zinc-200 group-hover:text-amber-400 transition-colors mb-2">{cert.hackathon?.title}</h3>
+                                            <h3 className="text-xl font-black italic uppercase italic tracking-tight text-zinc-200 group-hover:text-amber-400 transition-colors mb-2">{cert.type === 'course_completion' ? cert.course?.title : cert.hackathon?.title}</h3>
                                             <div className="flex items-center gap-2 mb-8">
                                                 <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${cert.type === 'winner' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-zinc-800 text-zinc-500 border-white/5'}`}>
-                                                    {cert.type === 'winner' ? `🏆 ${cert.position}` : 'Protocol Completion'}
+                                                    {cert.type === 'winner' ? `🏆 ${cert.position}` : cert.type === 'course_completion' ? 'Course Completion' : 'Protocol Completion'}
                                                 </div>
                                                 <span className="text-[9px] font-mono text-zinc-700 uppercase tracking-widest">{new Date(cert.createdAt).getFullYear()}</span>
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <a 
-                                                    href={cert.fileUrl} 
-                                                    target="_blank" 
+                                                    href={cert.fileUrl ? (cert.fileUrl.includes('/upload/') ? cert.fileUrl.replace('/upload/', '/upload/fl_attachment/') : cert.fileUrl) : '#'} 
+                                                    target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex-1 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 hover:bg-zinc-800 transition-all text-center"
+                                                    download={`CodeDabba_Certificate_${cert.certificateId}.pdf`}
+                                                    className="flex-1 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 hover:bg-zinc-800 transition-all text-center cursor-pointer"
                                                 >
                                                     Download
                                                 </a>

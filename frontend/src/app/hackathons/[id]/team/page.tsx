@@ -8,10 +8,13 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import {
     Loader2, Trophy, Clock, Github, Video, FileText, Upload,
     CheckCircle2, AlertCircle, History, ChevronRight, ArrowLeft,
-    ExternalLink, Timer, Zap, ShieldCheck
+    ExternalLink, Timer, Zap, ShieldCheck, DollarSign
 } from "lucide-react";
 import { toast } from 'react-hot-toast';
 import { Countdown } from "@/components/hackathons/Countdown";
+import { InvoiceModal } from "@/components/payments/InvoiceModal";
+import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
+import { useAuth } from "@/context/AuthProvider";
 
 interface Team {
     id: string;
@@ -28,17 +31,19 @@ interface Round {
     startDate: string;
     endDate: string;
     status: 'upcoming' | 'active' | 'judging' | 'closed';
-    allowZip: boolean;
+    allowDocument: boolean;
     allowGithub: boolean;
     allowVideo: boolean;
     allowDescription: boolean;
     maxFileSizeMb: number;
+    isPaymentRequired?: boolean;
+    paymentAmount?: number;
 }
 
 interface Submission {
     id: string;
     submittedAt: string;
-    zipUrl?: string;
+    documentUrl?: string;
     githubLink?: string;
     videoUrl?: string;
     description?: string;
@@ -51,13 +56,17 @@ interface Submission {
 export default function TeamDashboard() {
     const { id } = useParams();
     const router = useRouter();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [payments, setPayments] = useState<any[]>([]);
+    const [invoicePaymentId, setInvoicePaymentId] = useState<string | null>(null);
     const [data, setData] = useState<{
         team: Team;
         currentRound: Round | null;
         submissions: Submission[];
         isEliminated: boolean;
+        hackathon?: any;
     } | null>(null);
 
     // Form states
@@ -66,24 +75,46 @@ export default function TeamDashboard() {
     const [description, setDescription] = useState("");
     const [file, setFile] = useState<File | null>(null);
 
+    const { handlePayment, isProcessing } = useRazorpayPayment(() => {
+        fetchStatus();
+    });
+
     useEffect(() => {
         fetchStatus();
     }, [id]);
 
     const fetchStatus = async () => {
         try {
-            const { data } = await api.get(`/hackathons/${id}/team`);
-            const teamId = data.team.id;
+            const { data: teamData } = await api.get(`/hackathons/${id}/team`);
+            const teamId = teamData.team.id;
 
             const statusRes = await api.get(`/hackathons/${id}/teams/${teamId}/round-status`);
             setData(statusRes.data);
 
-
+            const paymentsRes = await api.get(`/payments/team/${teamId}`);
+            if (paymentsRes.data.status === 'success') {
+                setPayments(paymentsRes.data.paymentDetails || []);
+            }
         } catch (error) {
             toast.error("Failed to sync with Command Central");
             router.push(`/hackathons/${id}`);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRoundPayment = async () => {
+        if (!data?.team?.id || !data?.currentRound?.id) return;
+        try {
+            const res = await api.post('/payments/round', {
+                teamId: data.team.id,
+                roundId: data.currentRound.id
+            });
+            if (res.data.status === 'success' || res.data.payment) {
+                handlePayment(res.data.payment.id, `Round ${data.currentRound.roundNumber} Fee`, user?.name, user?.email);
+            }
+        } catch (error: any) {
+             toast.error(error.response?.data?.message || "Failed to initiate payment");
         }
     };
 
@@ -121,6 +152,9 @@ export default function TeamDashboard() {
     if (!data) return null;
 
     const { team, currentRound, submissions, isEliminated } = data;
+
+    const isCurrentRoundPaid = currentRound?.isPaymentRequired ? 
+        payments.some(p => p.roundId === currentRound.id && p.status === 'SUCCESS') : true;
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT']}>
@@ -181,9 +215,26 @@ export default function TeamDashboard() {
                                         Inbound Intel Submission
                                     </h2>
 
-                                    <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
-                                        <div className="grid md:grid-cols-2 gap-8">
-                                            {currentRound.allowGithub && (
+                                    {currentRound.isPaymentRequired && !isCurrentRoundPaid ? (
+                                        <div className="relative z-10 p-10 bg-black border border-violet-500/20 rounded-[2.5rem] text-center">
+                                            <div className="w-20 h-20 bg-violet-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                                <DollarSign className="w-10 h-10 text-violet-500" />
+                                            </div>
+                                            <h3 className="text-2xl font-black italic uppercase mb-2">Clearance Required</h3>
+                                            <p className="text-zinc-500 mb-8 max-w-sm mx-auto">This operational phase requires clearance. You must finalize the requisition to engage.</p>
+                                            
+                                            <button
+                                                onClick={handleRoundPayment}
+                                                disabled={isProcessing}
+                                                className="px-10 py-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-black italic uppercase rounded-2xl shadow-xl shadow-violet-600/20 active:scale-95 transition-all flex items-center justify-center gap-3 w-full max-w-md mx-auto"
+                                            >
+                                                {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : `Pay ${data.hackathon?.currency || 'INR'} ${currentRound.paymentAmount} to Proceed`}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
+                                            <div className="grid md:grid-cols-2 gap-8">
+                                                {currentRound.allowGithub && (
                                                 <div className="space-y-3">
                                                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                                                         <Github className="w-3 h-3" /> Repository Link
@@ -230,21 +281,21 @@ export default function TeamDashboard() {
                                             </div>
                                         )}
 
-                                        {currentRound.allowZip && (
+                                        {currentRound.allowDocument && (
                                             <div className="space-y-3">
                                                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                                                    <Upload className="w-3 h-3" /> Codebase Payload (ZIP)
+                                                    <FileText className="w-3 h-3" /> Document Payload (PDF/PPT)
                                                 </label>
                                                 <div className="relative group/file">
                                                     <input
                                                         type="file"
                                                         onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                                        accept=".zip,.rar,.7z"
+                                                        accept=".pdf,.ppt,.pptx"
                                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                                                     />
                                                     <div className="w-full bg-black border-2 border-dashed border-zinc-800 group-hover/file:border-fuchsia-500/30 rounded-2xl p-8 flex flex-col items-center justify-center transition-all bg-zinc-900/50">
-                                                        <Upload className="w-8 h-8 text-zinc-600 mb-2 group-hover/file:scale-110 transition-transform" />
-                                                        <p className="text-sm font-bold text-zinc-400">{file ? file.name : "Click or drag archive to transmit"}</p>
+                                                        <FileText className="w-8 h-8 text-zinc-600 mb-2 group-hover/file:scale-110 transition-transform" />
+                                                        <p className="text-sm font-bold text-zinc-400">{file ? file.name : "Click or drag document to transmit"}</p>
                                                         <p className="text-[10px] text-zinc-600 mt-2 uppercase tracking-widest">Max Size: {currentRound.maxFileSizeMb}MB</p>
                                                     </div>
                                                 </div>
@@ -266,6 +317,7 @@ export default function TeamDashboard() {
                                             )}
                                         </button>
                                     </form>
+                                    )}
                                 </section>
                             ) : currentRound?.status === 'active' && submissions.length > 0 ? (
                                 <div className="p-20 bg-zinc-900/50 border border-emerald-500/20 border-dashed rounded-[3rem] text-center">
@@ -296,11 +348,11 @@ export default function TeamDashboard() {
                                         <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">{currentRound.allowGithub ? "Required Signal" : "Optional"}</p>
                                     </div>
                                     <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-3xl">
-                                        <div className={`p-3 rounded-xl w-fit mb-4 ${currentRound.allowZip ? 'bg-violet-500/10 text-violet-400' : 'bg-zinc-800 text-zinc-600'}`}>
-                                            <Upload className="w-5 h-5" />
+                                        <div className={`p-3 rounded-xl w-fit mb-4 ${currentRound.allowDocument ? 'bg-violet-500/10 text-violet-400' : 'bg-zinc-800 text-zinc-600'}`}>
+                                            <FileText className="w-5 h-5" />
                                         </div>
-                                        <h4 className="text-sm font-black italic uppercase">Code Payload</h4>
-                                        <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">{currentRound.allowZip ? "Direct Upload" : "No archives"}</p>
+                                        <h4 className="text-sm font-black italic uppercase">Document Payload</h4>
+                                        <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">{currentRound.allowDocument ? "Direct Upload" : "No documents"}</p>
                                     </div>
                                     <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-3xl">
                                         <div className={`p-3 rounded-xl w-fit mb-4 ${currentRound.allowVideo ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-600'}`}>
@@ -364,9 +416,9 @@ export default function TeamDashboard() {
                                                         <Github className="w-3.5 h-3.5" />
                                                     </a>
                                                 )}
-                                                {sub.zipUrl && (
-                                                    <a href={sub.zipUrl} target="_blank" className="p-2 bg-black border border-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Download">
-                                                        <Upload className="w-3.5 h-3.5" />
+                                                {sub.documentUrl && (
+                                                    <a href={sub.documentUrl} target="_blank" className="p-2 bg-black border border-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Download">
+                                                        <FileText className="w-3.5 h-3.5" />
                                                     </a>
                                                 )}
                                                 {sub.videoUrl && (
@@ -407,10 +459,73 @@ export default function TeamDashboard() {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Payment History */}
+                            <div className="p-8 bg-black border border-zinc-800 rounded-[2.5rem]">
+                                <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6 flex items-center justify-between">
+                                    Requisition Log
+                                    <span className="bg-zinc-800 px-2 py-0.5 rounded text-[8px] font-black">{payments.length} Logs</span>
+                                </h3>
+                                <div className="space-y-4">
+                                    {payments.length === 0 ? (
+                                        <div className="text-center py-8 bg-zinc-950 rounded-2xl border border-zinc-900 border-dashed">
+                                            <DollarSign className="w-10 h-10 text-zinc-800 mx-auto mb-3 opacity-20" />
+                                            <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">No clearance logs</p>
+                                        </div>
+                                    ) : (
+                                        payments.map(payment => (
+                                            <div key={payment.id} className="p-5 rounded-2xl border bg-black/40 border-zinc-800">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h5 className="text-xs font-black italic uppercase text-zinc-300">{payment.paymentType}</h5>
+                                                        <p className="text-[20px] font-black italic text-violet-400 mt-1">{payment.currency} {payment.amount}</p>
+                                                    </div>
+                                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${
+                                                        payment.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                        payment.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-400' :
+                                                        'bg-red-500/10 text-red-400'
+                                                    }`}>
+                                                        {payment.status}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between mt-4">
+                                                    <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">
+                                                        {new Date(payment.createdAt).toLocaleDateString()}
+                                                    </span>
+                                                    {payment.status === 'SUCCESS' && (
+                                                        <button 
+                                                            onClick={() => setInvoicePaymentId(payment.id)}
+                                                            className="text-[10px] text-white font-black uppercase tracking-widest px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
+                                                        >
+                                                            Invoice
+                                                        </button>
+                                                    )}
+                                                    {payment.status === 'PENDING' && (
+                                                        <button 
+                                                            onClick={() => handlePayment(payment.id, 'Retry Requisition', user?.name, user?.email)}
+                                                            disabled={isProcessing}
+                                                            className="text-[10px] text-white font-black uppercase tracking-widest px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg transition-colors"
+                                                        >
+                                                            Pay Now
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </main>
             </div>
+            
+            {invoicePaymentId && (
+                <InvoiceModal 
+                    paymentId={invoicePaymentId}
+                    onClose={() => setInvoicePaymentId(null)}
+                />
+            )}
         </ProtectedRoute>
     );
 }

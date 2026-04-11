@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
 import { NavBar } from "@/components/landing/NavBar";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { Loader2, ArrowLeft, Shield, Star, MessageSquare, Save, ExternalLink, Github, Youtube, FileArchive, Info, AlertTriangle } from "lucide-react";
+import { Loader2, ArrowLeft, Shield, Star, MessageSquare, Save, ExternalLink, Github, Youtube, FileText, Info, AlertTriangle } from "lucide-react";
 import { toast } from 'react-hot-toast';
 
 interface Team {
@@ -194,12 +194,12 @@ export default function MentorJudgingPage() {
                                                             <span className="text-xs font-black uppercase tracking-wider">Demo Video</span>
                                                         </a>
                                                     )}
-                                                    {latestSub.zipUrl && (
-                                                        <a href={latestSub.zipUrl} target="_blank" className="p-6 bg-black border border-zinc-800 rounded-3xl flex items-center gap-4 hover:border-emerald-500/50 transition-all group">
+                                                    {latestSub.documentUrl && (
+                                                        <a href={latestSub.documentUrl} target="_blank" className="p-6 bg-black border border-zinc-800 rounded-3xl flex items-center gap-4 hover:border-emerald-500/50 transition-all group">
                                                             <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 group-hover:scale-110 transition-transform">
-                                                                <FileArchive className="w-6 h-6" />
+                                                                <FileText className="w-6 h-6" />
                                                             </div>
-                                                            <span className="text-xs font-black uppercase tracking-wider">Bundle</span>
+                                                            <span className="text-xs font-black uppercase tracking-wider">Document (PDF/PPT)</span>
                                                         </a>
                                                     )}
                                                 </div>

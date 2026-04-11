@@ -9,6 +9,7 @@ import { HackathonTeam } from '../../entities/hackathon-team.entity';
 import { HackathonLeaderboard } from '../../entities/hackathon-leaderboard.entity';
 import { HackathonActivityLog } from '../../entities/hackathon-activity-log.entity';
 import { HackathonsModule } from '../hackathons/hackathons.module';
+import { Course } from '../../entities/course.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { HackathonsModule } from '../hackathons/hackathons.module';
       HackathonTeam,
       HackathonLeaderboard,
       HackathonActivityLog,
+      Course,
     ]),
     HackathonsModule,
   ],

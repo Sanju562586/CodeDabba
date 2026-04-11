@@ -17,6 +17,11 @@ export enum RoundStatus {
   CLOSED = 'closed',
 }
 
+export enum RoundPaymentType {
+  ALL_TEAMS = 'ALL_TEAMS',
+  QUALIFIED_ONLY = 'QUALIFIED_ONLY',
+}
+
 @Entity('hackathon_rounds')
 export class HackathonRound {
   @PrimaryGeneratedColumn('uuid')
@@ -96,7 +101,7 @@ export class HackathonRound {
   weightagePercentage: number;
 
   @Column({ default: false })
-  allowZip: boolean;
+  allowDocument: boolean;
 
   @Column({ default: false })
   allowGithub: boolean;
@@ -112,6 +117,22 @@ export class HackathonRound {
 
   @Column('simple-array', { nullable: true })
   allowedFileTypes: string[];
+
+  @Column({ default: false })
+  isPaymentRequired: boolean;
+
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  paymentAmount: number;
+
+  @Column('timestamp', { nullable: true })
+  paymentDeadline: Date;
+
+  @Column({
+    type: 'enum',
+    enum: RoundPaymentType,
+    nullable: true,
+  })
+  paymentType: RoundPaymentType;
 
   @CreateDateColumn()
   createdAt: Date;

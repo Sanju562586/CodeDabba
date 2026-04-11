@@ -488,9 +488,9 @@ function SubmissionsTab({ rounds, stats, onEvaluate, canEvaluate }: { rounds: an
                                                 <Play className="w-3.5 h-3.5" /> Watch Video
                                             </Link>
                                         )}
-                                        {sub.zipUrl && (
-                                            <Link href={sub.zipUrl} target="_blank" className="flex items-center gap-2 px-4 py-3 bg-zinc-800 hover:bg-indigo-600 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
-                                                <Download className="w-3.5 h-3.5" /> Download ZIP
+                                        {sub.documentUrl && (
+                                            <Link href={sub.documentUrl} target="_blank" className="flex items-center gap-2 px-4 py-3 bg-zinc-800 hover:bg-indigo-600 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
+                                                <FileText className="w-3.5 h-3.5" /> Download Document
                                             </Link>
                                         )}
                                     </div>

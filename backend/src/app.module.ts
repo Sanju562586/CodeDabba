@@ -42,10 +42,11 @@ import { HackathonSubmission } from './entities/hackathon-submission.entity';
 import { HackathonScore } from './entities/hackathon-score.entity';
 import { HackathonLeaderboard } from './entities/hackathon-leaderboard.entity';
 import { HackathonActivityLog } from './entities/hackathon-activity-log.entity';
+import { HackathonPayment } from './entities/hackathon-payment.entity';
 import { Certificate } from './entities/certificate.entity';
 import { HackathonsModule } from './modules/hackathons/hackathons.module';
-
 import { CertificatesModule } from './modules/certificates/certificates.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -111,6 +112,7 @@ import { CertificatesModule } from './modules/certificates/certificates.module';
             HackathonScore,
             HackathonLeaderboard,
             HackathonActivityLog,
+            HackathonPayment,
             Certificate,
           ],
           synchronize: true, // Auto-create tables (dev only)
@@ -129,6 +131,7 @@ import { CertificatesModule } from './modules/certificates/certificates.module';
     TasksModule,
     HackathonsModule,
     CertificatesModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

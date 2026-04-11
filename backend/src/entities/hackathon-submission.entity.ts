@@ -44,7 +44,7 @@ export class HackathonSubmission {
 
 
   @Column({ nullable: true })
-  zipUrl: string;
+  documentUrl: string;
 
   @Column({ nullable: true })
   githubLink: string;

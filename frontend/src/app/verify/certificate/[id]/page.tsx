@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { NavBar } from "@/components/landing/NavBar";
 import api from "@/lib/axios";
 import { CheckCircle2, ShieldAlert, Award, Calendar, FileText, User as UserIcon } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function VerificationPage() {
     const { id } = useParams();
@@ -109,8 +110,8 @@ export default function VerificationPage() {
                                                     <FileText className="w-5 h-5 text-emerald-500" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Hackathon Mission</p>
-                                                    <p className="text-xl font-bold text-zinc-200">{cert.hackathon.title}</p>
+                                                    <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">{cert?.course ? 'Course Mission' : 'Hackathon Mission'}</p>
+                                                    <p className="text-xl font-bold text-zinc-200">{cert?.course?.title ?? cert?.hackathon?.title ?? 'Unknown Certificate'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -133,10 +134,11 @@ export default function VerificationPage() {
                                     </p>
                                 </div>
                                 <a 
-                                    href={cert.fileUrl} 
-                                    target="_blank" 
+                                    href={cert.fileUrl ? (cert.fileUrl.includes('/upload/') ? cert.fileUrl.replace('/upload/', '/upload/fl_attachment/') : cert.fileUrl) : '#'} 
+                                    target="_blank"
                                     rel="noopener noreferrer"
-                                    className="w-full py-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-xs font-black italic uppercase tracking-widest text-zinc-300 hover:bg-zinc-800 transition-all text-center flex items-center justify-center gap-2 group"
+                                    download={`CodeDabba_Certificate_${cert.certificateId}.pdf`}
+                                    className="w-full py-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-xs font-black italic uppercase tracking-widest text-zinc-300 hover:bg-zinc-800 transition-all text-center flex items-center justify-center gap-2 group cursor-pointer"
                                 >
                                     <FileText className="w-4 h-4 group-hover:text-amber-500 transition-colors" />
                                     Download Original PDF

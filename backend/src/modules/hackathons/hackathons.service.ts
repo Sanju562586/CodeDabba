@@ -1879,8 +1879,8 @@ export class HackathonsService {
       );
     }
 
-    let zipUrl = null;
-    if (file && round.allowZip) {
+    let documentUrl = null;
+    if (file && round.allowDocument) {
       if (file.size > round.maxFileSizeMb * 1024 * 1024) {
         throw new BadRequestException(
           `Payload too large. Max: ${round.maxFileSizeMb} MB`,
@@ -1902,7 +1902,7 @@ export class HackathonsService {
           );
           uploadStream.end(file.buffer);
         });
-        zipUrl = (result as any).secure_url;
+        documentUrl = (result as any).secure_url;
       } catch (err) {
         throw new BadRequestException(
           'Teleportation failed (File upload error)',
@@ -1939,7 +1939,7 @@ export class HackathonsService {
         hackathonId: round.hackathonId,
         teamId,
         roundId,
-        zipUrl: zipUrl || dto.zipUrl, // Support both direct upload and link
+        documentUrl: documentUrl || dto.documentUrl, // Support both direct upload and link
         githubLink: dto.githubLink,
         videoUrl: dto.videoUrl,
         description: dto.description,

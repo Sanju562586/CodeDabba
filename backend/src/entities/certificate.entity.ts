@@ -8,12 +8,14 @@ import {
   Index,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Course } from './course.entity';
 import { Hackathon } from './hackathon.entity';
 
 export enum CertificateType {
   PARTICIPATION = 'participation',
   WINNER = 'winner',
   TOP_RANK = 'top_rank',
+  COURSE_COMPLETION = 'course_completion',
 }
 
 @Entity('certificates')
@@ -32,12 +34,19 @@ export class Certificate {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column()
+  @Column({ nullable: true })
   hackathonId: string;
 
-  @ManyToOne(() => Hackathon)
+  @ManyToOne(() => Hackathon, { nullable: true })
   @JoinColumn({ name: 'hackathonId' })
   hackathon: Hackathon;
+
+  @Column({ nullable: true })
+  courseId: string;
+
+  @ManyToOne(() => Course, { nullable: true })
+  @JoinColumn({ name: 'courseId' })
+  course: Course | null;
 
   @Column({
     type: 'enum',

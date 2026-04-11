@@ -243,7 +243,7 @@ function AdminHackathonDetailContent() {
                                     <div className="flex flex-col gap-2">
                                         <RequirementItem label="GitHub Repository" active={hackathon.rounds.some((r: any) => r.allowGithub)} />
                                         <RequirementItem label="Pitch Video" active={hackathon.rounds.some((r: any) => r.allowVideo)} />
-                                        <RequirementItem label="Source (Zip) Upload" active={hackathon.rounds.some((r: any) => r.allowZip)} />
+                                        <RequirementItem label="Document (PDF/PPT)" active={hackathon.rounds.some((r: any) => r.allowDocument)} />
                                         <RequirementItem label="Detailed Description" active={hackathon.rounds.some((r: any) => r.allowDescription)} />
                                     </div>
                                 </div>

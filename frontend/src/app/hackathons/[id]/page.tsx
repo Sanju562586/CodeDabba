@@ -5,13 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
 import { NavBar } from "@/components/landing/NavBar";
 import { useAuth } from "@/context/AuthProvider";
-import { Loader2, Calendar, Users, ListChecks, ArrowLeft, Trophy, Clock, Github, Video, FileArchive, MessageCircle, X, Check, Mail, UserPlus, ShieldAlert } from "lucide-react";
+import { Loader2, Calendar, Users, ListChecks, ArrowLeft, Trophy, Clock, Github, Video, FileArchive, MessageCircle, X, Check, Mail, UserPlus, ShieldAlert, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { LeaderboardView } from "@/components/hackathons/LeaderboardView";
 import { HackathonTimelineTable } from "@/components/hackathons/HackathonTimelineTable";
+import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
 
 interface Round {
     roundNumber: number;
@@ -21,7 +22,7 @@ interface Round {
     endDate: string;
     isElimination: boolean;
     weightagePercentage: number;
-    allowZip: boolean;
+    allowDocument: boolean;
     allowGithub: boolean;
     allowVideo: boolean;
     allowDescription: boolean;
@@ -44,6 +45,9 @@ interface Hackathon {
     allowIndividual: boolean;
     allowTeam: boolean;
     status: string;
+    isPaid: boolean;
+    registrationFee?: number;
+    currency?: string;
     rounds: Round[];
     userRegistration?: {
         id: string;
@@ -79,6 +83,52 @@ export default function HackathonDetailsPage() {
     const [collegeEmail, setCollegeEmail] = useState("");
     const [highestQualification, setHighestQualification] = useState("");
     const [registering, setRegistering] = useState(false);
+
+    const executeBackendRegistration = async () => {
+        try {
+            await api.post(`/hackathons/${id}/register`, {
+                registrationType: regType,
+                teamName: regType === 'team' ? teamName : undefined,
+                members: regType === 'team' ? members.map(m => ({
+                    ...m,
+                    collegeEmail: m.collegeEmail || undefined,
+                    highestQualification: m.highestQualification || undefined
+                })) : undefined,
+                name,
+                mobile,
+                collegeEmail: (isStudying && collegeEmail) ? collegeEmail : undefined,
+                highestQualification: (!isStudying && highestQualification) ? highestQualification : undefined
+            });
+            toast.success("Registration successful! Prepare for battle.");
+            setShowRegisterModal(false);
+
+            // Optimistically update the team count for immediate feedback
+            setHackathon(prev => prev ? ({
+                ...prev,
+                teamCount: (prev.teamCount || 0) + 1,
+                userRegistration: { teamStatus: 'pending' } as any // Show as Enlisted immediately
+            }) : null);
+
+            router.refresh();
+            await fetchHackathon();
+        } catch (error: any) {
+            const message = error.response?.data?.message;
+            if (Array.isArray(message)) {
+                toast.error(message[0]);
+            } else {
+                toast.error(message || "Registration failed");
+            }
+        } finally {
+            setRegistering(false);
+        }
+    };
+
+    const { handlePayment, isProcessing } = useRazorpayPayment(
+        () => {
+             // on success, complete registration
+             executeBackendRegistration();
+        }
+    );
 
     useEffect(() => {
         if (user) {
@@ -150,41 +200,23 @@ export default function HackathonDetailsPage() {
         }
 
         setRegistering(true);
-        try {
-            await api.post(`/hackathons/${id}/register`, {
-                registrationType: regType,
-                teamName: regType === 'team' ? teamName : undefined,
-                members: regType === 'team' ? members.map(m => ({
-                    ...m,
-                    collegeEmail: m.collegeEmail || undefined,
-                    highestQualification: m.highestQualification || undefined
-                })) : undefined,
-                name,
-                mobile,
-                collegeEmail: (isStudying && collegeEmail) ? collegeEmail : undefined,
-                highestQualification: (!isStudying && highestQualification) ? highestQualification : undefined
-            });
-            toast.success("Registration successful! Prepare for battle.");
-            setShowRegisterModal(false);
 
-            // Optimistically update the team count for immediate feedback
-            setHackathon(prev => prev ? ({
-                ...prev,
-                teamCount: (prev.teamCount || 0) + 1,
-                userRegistration: { teamStatus: 'pending' } as any // Show as Enlisted immediately
-            }) : null);
-
-            router.refresh();
-            await fetchHackathon();
-        } catch (error: any) {
-            const message = error.response?.data?.message;
-            if (Array.isArray(message)) {
-                toast.error(message[0]);
-            } else {
-                toast.error(message || "Registration failed");
+        if (hackathon?.isPaid) {
+            try {
+                // Initialize payment
+                const { data } = await api.post(`/payments/registration`, { hackathonId: id });
+                if (data.status === 'success') {
+                    handlePayment(data.payment.id, hackathon.title, name, user?.email);
+                } else {
+                    toast.error("Failed to initialize payment");
+                    setRegistering(false);
+                }
+            } catch (error: any) {
+                toast.error(error.response?.data?.message || "Failed to initialize payment");
+                setRegistering(false);
             }
-        } finally {
-            setRegistering(false);
+        } else {
+            await executeBackendRegistration();
         }
     };
 
@@ -354,7 +386,7 @@ export default function HackathonDetailsPage() {
                                                     {round.description}
                                                 </div>
                                                 <div className="flex flex-wrap gap-4 items-center">
-                                                    {round.allowZip && <span className="flex items-center gap-2 px-4 py-2 bg-zinc-800/50 rounded-xl text-xs font-bold text-zinc-400 border border-white/5"><FileArchive className="w-4 h-4" /> Source Code</span>}
+                                                    {round.allowDocument && <span className="flex items-center gap-2 px-4 py-2 bg-zinc-800/50 rounded-xl text-xs font-bold text-zinc-400 border border-white/5"><FileText className="w-4 h-4" /> Document (PDF/PPT)</span>}
                                                     {round.allowGithub && <span className="flex items-center gap-2 px-4 py-2 bg-zinc-800/50 rounded-xl text-xs font-bold text-zinc-400 border border-white/5"><Github className="w-4 h-4" /> GitHub Repo</span>}
                                                     {round.allowVideo && <span className="flex items-center gap-2 px-4 py-2 bg-zinc-800/50 rounded-xl text-xs font-bold text-zinc-400 border border-white/5"><Video className="w-4 h-4" /> Pitch Video</span>}
                                                     {round.allowDescription && <span className="flex items-center gap-2 px-4 py-2 bg-zinc-800/50 rounded-xl text-xs font-bold text-zinc-400 border border-white/5"><MessageCircle className="w-4 h-4" /> Documentation</span>}
@@ -711,10 +743,10 @@ export default function HackathonDetailsPage() {
                             <div className="pt-6">
                                 <button
                                     onClick={handleRegister}
-                                    disabled={registering}
+                                    disabled={registering || isProcessing}
                                     className="w-full py-6 bg-white text-black font-black italic uppercase text-2xl rounded-3xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-4"
                                 >
-                                    {registering ? <Loader2 className="w-8 h-8 animate-spin" /> : "Confirm Enlistment"}
+                                    {(registering || isProcessing) ? <Loader2 className="w-8 h-8 animate-spin" /> : (hackathon.isPaid ? `Pay ${hackathon.currency || 'INR'} ${hackathon.registrationFee} & Enlist` : "Confirm Enlistment")}
                                 </button>
                                 <p className="text-center text-zinc-600 text-[10px] font-black uppercase tracking-widest mt-6">By enlisting, you agree to the battle laws and mission protocol.</p>
                             </div>

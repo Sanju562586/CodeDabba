@@ -16,7 +16,7 @@ interface Round {
     endDate: string;
     isElimination: boolean;
     weightagePercentage: number;
-    allowZip: boolean;
+    allowDocument: boolean;
     allowGithub: boolean;
     allowVideo: boolean;
     allowDescription: boolean;
@@ -164,7 +164,7 @@ export default function HackathonPreviewPage() {
                                                 {round.description}
                                             </div>
                                             <div className="flex flex-wrap gap-4">
-                                                {round.allowZip && <span className="flex items-center gap-2 px-3 py-1 bg-zinc-800 rounded-lg text-xs font-bold text-zinc-400"><FileArchive className="w-3 h-3" /> Source Code</span>}
+                                                {round.allowDocument && <span className="flex items-center gap-2 px-3 py-1 bg-zinc-800 rounded-lg text-xs font-bold text-zinc-400"><FileText className="w-3 h-3" /> Document (PDF/PPT)</span>}
                                                 {round.allowGithub && <span className="flex items-center gap-2 px-3 py-1 bg-zinc-800 rounded-lg text-xs font-bold text-zinc-400"><Github className="w-3 h-3" /> GitHub Repo</span>}
                                                 {round.allowVideo && <span className="flex items-center gap-2 px-3 py-1 bg-zinc-800 rounded-lg text-xs font-bold text-zinc-400"><Video className="w-3 h-3" /> Pitch Video</span>}
                                                 {round.allowDescription && <span className="flex items-center gap-2 px-3 py-1 bg-zinc-800 rounded-lg text-xs font-bold text-zinc-400"><MessageCircle className="w-3 h-3" /> Documentation</span>}

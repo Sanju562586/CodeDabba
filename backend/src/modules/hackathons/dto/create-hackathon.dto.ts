@@ -53,7 +53,7 @@ class CreateRoundDto {
 
   @IsBoolean()
   @IsOptional()
-  allowZip?: boolean;
+  allowDocument?: boolean;
 
   @IsBoolean()
   @IsOptional()

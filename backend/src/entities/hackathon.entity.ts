@@ -91,6 +91,21 @@ export class Hackathon {
   @Column({ default: false })
   isMentorDistributed: boolean;
 
+  @Column({ default: false })
+  isPaid: boolean;
+
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  registrationFee: number;
+
+  @Column('timestamp', { nullable: true })
+  paymentDeadline: Date;
+
+  @Column({ default: 'INR' })
+  currency: string;
+
+  @Column('text', { nullable: true })
+  refundPolicy: string;
+
   @Column()
   createdById: string;
 

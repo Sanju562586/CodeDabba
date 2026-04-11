@@ -177,6 +177,11 @@ export default function LearnPage() {
                     };
                 });
 
+                if (data.courseCompleted) {
+                    router.push(`/learn/${courseId}/completion`);
+                    return;
+                }
+
                 // Navigate to next chapter if available
                 if (data.progress.currentChapterId && data.progress.currentChapterId !== currentChapter.id) {
                     // Find next chapter object

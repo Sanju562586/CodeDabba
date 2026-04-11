@@ -7,7 +7,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, Not, In } from 'typeorm';
+import { Repository, ILike, Not, In, DataSource } from 'typeorm';
 import {
   Course,
   CourseStatus,
@@ -28,6 +28,7 @@ import * as cloudinary from 'cloudinary';
 import { LessonBlock } from '../../entities/lesson-block.entity';
 import { CreateBlockDto } from './dto/create-block.dto';
 import { Progress } from '../../entities/progress.entity';
+import { CertificatesService } from '../certificates/certificates.service';
 
 @Injectable()
 export class CoursesService {
@@ -46,6 +47,8 @@ export class CoursesService {
     private enrollmentsRepository: Repository<Enrollment>,
     @InjectRepository(Progress)
     private progressRepository: Repository<Progress>,
+    private readonly certificatesService: CertificatesService,
+    private dataSource: DataSource,
   ) {
     cloudinary.v2.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -149,7 +152,7 @@ export class CoursesService {
     return { data: dataWithEnrollment, total, page: +page, limit: +limit };
   }
 
-  async enroll(userId: string, courseId: string): Promise<Enrollment> {
+  async enroll(userId: string, courseId: string, skipPaymentCheck = false): Promise<Enrollment> {
     const course = await this.coursesRepository.findOne({
       where: { id: courseId },
       relations: ['modules', 'modules.chapters'],
@@ -158,6 +161,10 @@ export class CoursesService {
 
     if (course.status !== CourseStatus.PUBLISHED) {
       throw new BadRequestException('Course is not available for enrollment');
+    }
+
+    if (!skipPaymentCheck && course.accessType === CourseAccessType.PAID) {
+      throw new BadRequestException('Please purchase this course before enrollment.');
     }
 
     const existing = await this.enrollmentsRepository.findOne({
@@ -770,14 +777,21 @@ export class CoursesService {
     if (course.mentorId !== user.id)
       throw new ForbiddenException('Not your course');
 
-    if (course.status !== CourseStatus.CONTENT_DRAFT) {
+    const validSubmitStatuses = [
+      CourseStatus.CURRICULUM_APPROVED,
+      CourseStatus.CONTENT_DRAFT,
+      CourseStatus.CONTENT_REJECTED,
+    ];
+
+    if (!validSubmitStatuses.includes(course.status)) {
       throw new BadRequestException(
-        'Can only submit content from CONTENT DRAFT status',
+        'Can only submit content from curriculum approved, content draft, or content rejected status',
       );
     }
 
     course.status = CourseStatus.CONTENT_UNDER_REVIEW;
     course.submittedContentAt = new Date();
+    course.rejectReason = null;
     return await this.coursesRepository.save(course);
   }
 
@@ -956,9 +970,14 @@ export class CoursesService {
 
       await this.progressRepository.save(progress);
     }
+    
+    const finalProgress = await this.progressRepository.findOne({ where: { userId: user.id, courseId }});
+    const totalChapters = await this.getCourseTotalChapters(courseId);
+    const courseCompleted = finalProgress ? finalProgress.completedLessonsCount === totalChapters : false;
 
     return {
       completed: true,
+      courseCompleted,
       progress: {
         percentage: Math.min(
           100,

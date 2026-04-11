@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { NavBar } from "@/components/landing/NavBar";
 import { useState } from "react";
 import api from "@/lib/axios";
-import { Plus, Trash2, Save, Info, Calendar, Users, ListChecks, ArrowLeft, Loader2, Sparkles, Wand2, Check, Shield, UserCheck, Clock, MessageSquare, Trophy } from "lucide-react";
+import { Plus, Trash2, Save, Info, Calendar, Users, ListChecks, ArrowLeft, Loader2, Sparkles, Wand2, Check, Shield, UserCheck, Clock, MessageSquare, Trophy, CreditCard } from "lucide-react";
 import { toast } from 'react-hot-toast';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -22,18 +22,22 @@ interface Round {
     eliminationThreshold: number | null;
     eliminationCount: number;
     weightagePercentage: number;
-    allowZip: boolean;
+    allowDocument: boolean;
     allowGithub: boolean;
     allowVideo: boolean;
     allowDescription: boolean;
     maxFileSizeMb: number;
     allowedFileTypes: string[];
+    isPaymentRequired: boolean;
+    paymentAmount: number | string;
+    paymentDeadline: string;
+    paymentType: 'ALL_TEAMS' | 'QUALIFIED_ONLY';
 }
 
 export default function CreateHackathonPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [activeSection, setActiveSection] = useState<'basic' | 'timeline' | 'participation' | 'rounds'>('basic');
+    const [activeSection, setActiveSection] = useState<'basic' | 'timeline' | 'participation' | 'pricing' | 'rounds'>('basic');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -52,6 +56,12 @@ export default function CreateHackathonPage() {
         maxParticipants: 0,
         allowIndividual: true,
         allowTeam: true,
+        isPaid: false,
+        registrationFee: '',
+        paymentDeadlineType: 'custom' as 'teamFormation' | 'approvalPhase' | 'custom',
+        paymentDeadlineDate: '',
+        currency: 'INR',
+        refundPolicy: '',
     });
 
     const [rounds, setRounds] = useState<Round[]>([
@@ -67,12 +77,18 @@ export default function CreateHackathonPage() {
             eliminationThreshold: 0,
             eliminationCount: 0,
             weightagePercentage: 20,
-            allowZip: true,
+            allowDocument: true,
             allowGithub: false,
             allowVideo: false,
             allowDescription: true,
             maxFileSizeMb: 50,
-            allowedFileTypes: ['ppt', 'pptx']
+            allowedFileTypes: ['ppt', 'pptx'],
+            isPaymentRequired: false,
+            paymentAmount: '',
+            paymentDeadlineType: 'custom' as 'submissionStart' | 'custom',
+            paymentDeadlineDate: '',
+            paymentType: 'ALL_TEAMS',
+            refundAllowed: false
         }
     ]);
 
@@ -89,12 +105,18 @@ export default function CreateHackathonPage() {
             eliminationThreshold: 0,
             eliminationCount: 0,
             weightagePercentage: 0,
-            allowZip: true,
+            allowDocument: true,
             allowGithub: false,
             allowVideo: false,
             allowDescription: true,
             maxFileSizeMb: 50,
-            allowedFileTypes: ['ppt', 'pptx']
+            allowedFileTypes: ['ppt', 'pptx'],
+            isPaymentRequired: false,
+            paymentAmount: '',
+            paymentDeadlineType: 'custom',
+            paymentDeadlineDate: '',
+            paymentType: 'ALL_TEAMS',
+            refundAllowed: false
         }]);
     };
 
@@ -135,6 +157,48 @@ export default function CreateHackathonPage() {
             return;
         }
 
+        // Pricing Validation
+        let computedGlobalDeadline = formData.paymentDeadlineDate;
+        if (formData.isPaid) {
+            if (!formData.registrationFee || Number(formData.registrationFee) <= 0) {
+                toast.error("Please enter a valid Registration Fee");
+                setActiveSection('pricing');
+                return;
+            }
+            if (formData.paymentDeadlineType === 'teamFormation') computedGlobalDeadline = formData.mentorSelectionStart;
+            else if (formData.paymentDeadlineType === 'approvalPhase') computedGlobalDeadline = formData.approvalStart;
+
+            if (!computedGlobalDeadline) {
+                toast.error("Please select a valid Payment Deadline for Registration");
+                setActiveSection('pricing');
+                return;
+            }
+        }
+
+        // Round Payment Validation
+        const formattedRounds = [];
+        for (let i = 0; i < rounds.length; i++) {
+            const r = rounds[i];
+            let computedRoundDeadline = r.paymentDeadlineDate;
+
+            if (r.isPaymentRequired) {
+                if (!r.paymentAmount || Number(r.paymentAmount) <= 0) {
+                    toast.error(`Please enter a valid Fee Amount for Round ${i + 1}`);
+                    setActiveSection('rounds');
+                    return;
+                }
+                if (r.paymentDeadlineType === 'submissionStart') computedRoundDeadline = r.submissionStart;
+
+                if (!computedRoundDeadline) {
+                    toast.error(`Please select a valid Payment Deadline for Round ${i + 1}`);
+                    setActiveSection('rounds');
+                    return;
+                }
+            }
+            
+            formattedRounds.push({ ...r, computedRoundDeadline });
+        }
+
         setLoading(true);
         try {
             let bannerUrl = formData.bannerUrl;
@@ -170,13 +234,18 @@ export default function CreateHackathonPage() {
             const payload = {
                 ...restFormData,
                 bannerUrl,
+                registrationFee: formData.isPaid ? Number(formData.registrationFee) : null,
+                paymentDeadline: formData.isPaid ? computedGlobalDeadline : null,
                 maxParticipants: formData.maxParticipants || undefined,
-                rounds: rounds.map(r => ({
+                rounds: formattedRounds.map(r => ({
                     ...r,
                     weightagePercentage: Number(r.weightagePercentage),
                     eliminationThreshold: r.isElimination ? Number(r.eliminationThreshold) : null,
                     eliminationCount: Number(r.eliminationCount),
-                    maxFileSizeMb: Number(r.maxFileSizeMb)
+                    maxFileSizeMb: Number(r.maxFileSizeMb),
+                    paymentAmount: r.isPaymentRequired ? Number(r.paymentAmount) : null,
+                    paymentDeadline: r.isPaymentRequired ? r.computedRoundDeadline : null,
+                    paymentType: r.isPaymentRequired ? r.paymentType : null
                 }))
             };
 
@@ -243,6 +312,13 @@ export default function CreateHackathonPage() {
                             >
                                 <Users className="w-5 h-5" />
                                 <span className="font-bold">Participation</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveSection('pricing')}
+                                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all ${activeSection === 'pricing' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20' : 'bg-zinc-900/50 text-zinc-400 hover:bg-zinc-800'}`}
+                            >
+                                <CreditCard className="w-5 h-5" />
+                                <span className="font-bold">Pricing</span>
                             </button>
                             <button
                                 onClick={() => setActiveSection('rounds')}
@@ -460,6 +536,94 @@ export default function CreateHackathonPage() {
                                     </div>
                                 )}
 
+                                {activeSection === 'pricing' && (
+                                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4">
+                                        <div className="p-8 bg-zinc-950/50 rounded-[2rem] border border-zinc-800 space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-white">Global Entrance Fee</h3>
+                                                    <p className="text-zinc-500 text-sm mt-1">Require teams to pay a registration fee before accessing the Hackathon.</p>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" className="sr-only peer" checked={formData.isPaid} onChange={(e) => setFormData({ ...formData, isPaid: e.target.checked })} />
+                                                    <div className="w-14 h-7 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-violet-600"></div>
+                                                </label>
+                                            </div>
+
+                                            {formData.isPaid && (
+                                                <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-zinc-800 animate-in fade-in">
+                                                    <label className="block">
+                                                        <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Registration Fee (₹)</span>
+                                                        <input
+                                                            type="number"
+                                                            value={formData.registrationFee}
+                                                            onChange={(e) => setFormData({ ...formData, registrationFee: e.target.value })}
+                                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white focus:border-violet-500 outline-none"
+                                                            placeholder="e.g., 500"
+                                                            min="0"
+                                                        />
+                                                    </label>
+                                                    <label className="block">
+                                                        <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Currency</span>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.currency}
+                                                            disabled
+                                                            className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl px-6 py-4 text-zinc-500 outline-none cursor-not-allowed"
+                                                        />
+                                                    </label>
+                                                    <label className="block md:col-span-2">
+                                                        <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Payment Deadline</span>
+                                                        <div className="flex flex-col gap-4 bg-zinc-950 p-6 rounded-2xl border border-zinc-800">
+                                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                                <input type="radio" name="global-deadline" className="w-4 h-4 text-violet-500 bg-zinc-900 border-zinc-700 focus:ring-violet-500" 
+                                                                    checked={formData.paymentDeadlineType === 'teamFormation'} 
+                                                                    onChange={() => setFormData({ ...formData, paymentDeadlineType: 'teamFormation' })} 
+                                                                />
+                                                                <span className="text-zinc-300">Before Team Formation (Start of Mentor Selection)</span>
+                                                            </label>
+                                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                                <input type="radio" name="global-deadline" className="w-4 h-4 text-violet-500 bg-zinc-900 border-zinc-700 focus:ring-violet-500" 
+                                                                    checked={formData.paymentDeadlineType === 'approvalPhase'} 
+                                                                    onChange={() => setFormData({ ...formData, paymentDeadlineType: 'approvalPhase' })} 
+                                                                />
+                                                                <span className="text-zinc-300">Before Approval Phase (Start of Squad Approval)</span>
+                                                            </label>
+                                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                                <input type="radio" name="global-deadline" className="w-4 h-4 text-violet-500 bg-zinc-900 border-zinc-700 focus:ring-violet-500" 
+                                                                    checked={formData.paymentDeadlineType === 'custom'} 
+                                                                    onChange={() => setFormData({ ...formData, paymentDeadlineType: 'custom' })} 
+                                                                />
+                                                                <span className="text-zinc-300">Custom Date-Time</span>
+                                                            </label>
+                                                            
+                                                            {formData.paymentDeadlineType === 'custom' && (
+                                                                <div className="mt-2 pl-7 animate-in fade-in slide-in-from-top-1">
+                                                                    <input
+                                                                        type="datetime-local"
+                                                                        value={formData.paymentDeadlineDate}
+                                                                        onChange={(e) => setFormData({ ...formData, paymentDeadlineDate: e.target.value })}
+                                                                        className="w-full max-w-md bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-violet-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </label>
+                                                    <label className="block md:col-span-2">
+                                                        <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Refund Policy</span>
+                                                        <textarea
+                                                            value={formData.refundPolicy}
+                                                            onChange={(e) => setFormData({ ...formData, refundPolicy: e.target.value })}
+                                                            placeholder="State the terms and conditions..."
+                                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white focus:border-violet-500 outline-none min-h-[100px]"
+                                                        />
+                                                    </label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {activeSection === 'rounds' && (
                                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
                                         <div className="flex items-center justify-between mb-4">
@@ -605,8 +769,8 @@ export default function CreateHackathonPage() {
                                                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Submission Requirements</p>
                                                             <div className="grid grid-cols-2 gap-y-3 gap-x-4">
                                                                 <label className="flex items-center gap-2 cursor-pointer">
-                                                                    <input type="checkbox" checked={round.allowZip} onChange={(e) => handleRoundChange(idx, 'allowZip', e.target.checked)} className="rounded border-zinc-700 bg-zinc-900" />
-                                                                    <span className="text-xs text-zinc-400">PPT (Pitch Deck)</span>
+                                                                    <input type="checkbox" checked={round.allowDocument} onChange={(e) => handleRoundChange(idx, 'allowDocument', e.target.checked)} className="rounded border-zinc-700 bg-zinc-900" />
+                                                                    <span className="text-xs text-zinc-400">PDF / PPT (Pitch Deck)</span>
                                                                 </label>
                                                                 <label className="flex items-center gap-2 cursor-pointer">
                                                                     <input type="checkbox" checked={round.allowGithub} onChange={(e) => handleRoundChange(idx, 'allowGithub', e.target.checked)} className="rounded border-zinc-700 bg-zinc-900" />
@@ -621,6 +785,92 @@ export default function CreateHackathonPage() {
                                                                     <span className="text-xs text-zinc-400">Description</span>
                                                                 </label>
                                                             </div>
+                                                        </div>
+
+                                                        <div className="mt-8 pt-8 border-t border-zinc-800 md:col-span-2">
+                                                            <div className="flex items-center justify-between mb-6">
+                                                                <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-2"><CreditCard className="w-4 h-4"/> Payment Settings</p>
+                                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                                    <span className="mr-3 text-xs font-bold text-zinc-400 uppercase">Require Payment for this Round</span>
+                                                                    <input type="checkbox" className="sr-only peer" checked={round.isPaymentRequired} onChange={(e) => handleRoundChange(idx, 'isPaymentRequired', e.target.checked)} />
+                                                                    <div className="w-9 h-5 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                                                                </label>
+                                                            </div>
+                                                            
+                                                            {round.isPaymentRequired && (
+                                                                <div className="grid md:grid-cols-2 gap-6 animate-in fade-in">
+                                                                    <label className="block">
+                                                                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 block">Fee Amount (₹)</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={round.paymentAmount}
+                                                                            onChange={(e) => handleRoundChange(idx, 'paymentAmount', e.target.value)}
+                                                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500/50"
+                                                                            placeholder="e.g. 200"
+                                                                            min="0"
+                                                                        />
+                                                                    </label>
+                                                                    <div className="block md:col-span-2">
+                                                                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Payment Deadline</span>
+                                                                        <div className="flex flex-col gap-4 bg-zinc-950 p-6 rounded-xl border border-zinc-800">
+                                                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                                                <input type="radio" name={`round-deadline-${idx}`} className="w-4 h-4 text-emerald-500 bg-zinc-900 border-zinc-700 focus:ring-emerald-500" 
+                                                                                    checked={round.paymentDeadlineType === 'submissionStart'} 
+                                                                                    onChange={() => handleRoundChange(idx, 'paymentDeadlineType', 'submissionStart')} 
+                                                                                />
+                                                                                <span className="text-zinc-300 text-sm">Before Submission Start</span>
+                                                                            </label>
+                                                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                                                <input type="radio" name={`round-deadline-${idx}`} className="w-4 h-4 text-emerald-500 bg-zinc-900 border-zinc-700 focus:ring-emerald-500" 
+                                                                                    checked={round.paymentDeadlineType === 'custom'} 
+                                                                                    onChange={() => handleRoundChange(idx, 'paymentDeadlineType', 'custom')} 
+                                                                                />
+                                                                                <span className="text-zinc-300 text-sm">Custom Date-Time</span>
+                                                                            </label>
+                                                                            
+                                                                            {round.paymentDeadlineType === 'custom' && (
+                                                                                <div className="mt-2 pl-7 animate-in fade-in slide-in-from-top-1">
+                                                                                    <input
+                                                                                        type="datetime-local"
+                                                                                        value={round.paymentDeadlineDate}
+                                                                                        onChange={(e) => handleRoundChange(idx, 'paymentDeadlineDate', e.target.value)}
+                                                                                        className="w-full max-w-sm bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-sm text-white outline-none focus:border-emerald-500/50"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <div className="block md:col-span-2 grid md:grid-cols-2 gap-6">
+                                                                        <div>
+                                                                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Who Pays?</span>
+                                                                            <div className="flex gap-4">
+                                                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                                                    <input type="radio" name={`payType-${idx}`} checked={round.paymentType === 'ALL_TEAMS'} onChange={() => handleRoundChange(idx, 'paymentType', 'ALL_TEAMS')} className="text-emerald-500 focus:ring-emerald-500 bg-zinc-900 border-zinc-700 w-4 h-4" />
+                                                                                    <span className="text-sm text-zinc-400 font-medium">All Approved Teams</span>
+                                                                                </label>
+                                                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                                                    <input type="radio" name={`payType-${idx}`} checked={round.paymentType === 'QUALIFIED_ONLY'} onChange={() => handleRoundChange(idx, 'paymentType', 'QUALIFIED_ONLY')} className="text-emerald-500 focus:ring-emerald-500 bg-zinc-900 border-zinc-700 w-4 h-4" />
+                                                                                    <span className="text-sm text-zinc-400 font-medium">Only Qualified Teams</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Refund Allowed</span>
+                                                                            <div className="flex gap-4">
+                                                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                                                    <input type="radio" name={`refundAllowed-${idx}`} checked={round.refundAllowed === true} onChange={() => handleRoundChange(idx, 'refundAllowed', true)} className="text-emerald-500 focus:ring-emerald-500 bg-zinc-900 border-zinc-700 w-4 h-4" />
+                                                                                    <span className="text-sm text-zinc-400 font-medium">Yes</span>
+                                                                                </label>
+                                                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                                                    <input type="radio" name={`refundAllowed-${idx}`} checked={round.refundAllowed === false} onChange={() => handleRoundChange(idx, 'refundAllowed', false)} className="text-emerald-500 focus:ring-emerald-500 bg-zinc-900 border-zinc-700 w-4 h-4" />
+                                                                                    <span className="text-sm text-zinc-400 font-medium">No</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
