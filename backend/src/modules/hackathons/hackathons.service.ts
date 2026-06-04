@@ -2933,4 +2933,29 @@ export class HackathonsService {
       },
     };
   }
+
+  // --- Admin God Mode Functions ---
+  async deleteHackathonAdmin(id: string): Promise<{ message: string }> {
+    const hackathon = await this.hackathonsRepository.findOne({
+      where: { id },
+    });
+    if (!hackathon) throw new NotFoundException('Hackathon not found');
+
+    // Due to TypeORM cascade setup, removing the hackathon should delete its child records
+    // (teams, rounds, mentor assignments, registrations, etc.)
+    await this.hackathonsRepository.remove(hackathon);
+
+    return { message: 'Hackathon successfully deleted.' };
+  }
+
+  async deleteTeamAdmin(hackathonId: string, teamId: string): Promise<{ message: string }> {
+    const team = await this.teamsRepository.findOne({
+      where: { id: teamId, hackathonId },
+    });
+    if (!team) throw new NotFoundException('Team not found');
+
+    await this.teamsRepository.remove(team);
+
+    return { message: 'Team successfully removed.' };
+  }
 }

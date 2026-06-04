@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
-import { NavBar } from "@/components/landing/NavBar";
 import { Loader2, Calendar, Users, ListChecks, ArrowLeft, Trophy, ShieldAlert, Clock, Github, Video, FileText, MessageCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -65,7 +64,6 @@ export default function HackathonPreviewPage() {
 
     return (
         <div className="min-h-screen bg-black text-white pb-24">
-            <NavBar />
 
             {/* Admin Preview Banner */}
             <div className="bg-amber-500 text-black py-2 px-6 flex items-center justify-between font-bold text-sm sticky top-0 z-50 shadow-lg">

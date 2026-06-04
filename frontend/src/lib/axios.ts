@@ -11,7 +11,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('access_token');
+        const token = sessionStorage.getItem('access_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -24,10 +24,28 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+
+        // Skip interceptor for auth endpoints — let the calling code handle those errors
+        const isAuthEndpoint = originalRequest?.url?.includes('/auth/login') ||
+            originalRequest?.url?.includes('/auth/register') ||
+            originalRequest?.url?.includes('/auth/google');
+
+        if (isAuthEndpoint) {
+            return Promise.reject(error);
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
-            const refreshToken = localStorage.getItem('refresh_token');
-            const userId = localStorage.getItem('user_id'); // Store user_id or get from decoded token
+
+            // Only attempt refresh if the user was actually authenticated
+            const hasExistingToken = !!sessionStorage.getItem('access_token');
+            if (!hasExistingToken) {
+                // Not authenticated at all — just reject, don't redirect
+                return Promise.reject(error);
+            }
+
+            const refreshToken = sessionStorage.getItem('refresh_token');
+            const userId = sessionStorage.getItem('user_id');
 
             if (refreshToken && userId) {
                 try {
@@ -36,21 +54,24 @@ api.interceptors.response.use(
                         refreshToken,
                     });
 
-                    localStorage.setItem('access_token', data.access_token);
-                    localStorage.setItem('refresh_token', data.refresh_token);
+                    sessionStorage.setItem('access_token', data.access_token);
+                    sessionStorage.setItem('refresh_token', data.refresh_token);
 
                     // Update header for the original request
                     originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
                     return api(originalRequest);
                 } catch (refreshError) {
-                    // If refresh fails, logout
-                    localStorage.removeItem('access_token');
-                    localStorage.removeItem('refresh_token');
-                    localStorage.removeItem('user_id');
-                    localStorage.removeItem('user_role');
+                    // Refresh failed — clear session and redirect to login
+                    sessionStorage.removeItem('access_token');
+                    sessionStorage.removeItem('refresh_token');
+                    sessionStorage.removeItem('user_id');
+                    sessionStorage.removeItem('user_role');
+                    sessionStorage.removeItem('user');
                     window.location.href = '/login';
                 }
             } else {
+                // No refresh token — clear and redirect
+                sessionStorage.clear();
                 window.location.href = '/login';
             }
         }

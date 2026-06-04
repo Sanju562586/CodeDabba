@@ -2,9 +2,8 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 
-// TODO: move secret to env
 export const jwtConstants = {
-  secret: 'secretKey',
+  secret: process.env.JWT_SECRET || 'secretKey',
 };
 
 @Injectable()

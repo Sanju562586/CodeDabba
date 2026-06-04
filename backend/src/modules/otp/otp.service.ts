@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Otp, OtpType } from '../../entities/otp.entity';
 import { MoreThan, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Resend } from 'resend';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class OtpService {
@@ -13,6 +13,7 @@ export class OtpService {
   constructor(
     @InjectRepository(Otp)
     private otpRepository: Repository<Otp>,
+    private mailerService: MailerService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -89,26 +90,17 @@ export class OtpService {
   }
 
   private async sendOtpEmail(email: string, otp: string, type: string) {
-    console.log(`[OTP SERVICE] Attempting to send ${type} OTP to ${email}`);
-
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      this.logger.error('Missing RESEND_API_KEY environment variable');
-      throw new BadRequestException('Email service is not configured');
-    }
-
-    const resend = new Resend(apiKey);
+    this.logger.log(`Attempting to send ${type} OTP to ${email}`);
 
     try {
-      await resend.emails.send({
-        from: 'CodeDabba <onboarding@resend.dev>',
+      await this.mailerService.sendMail({
         to: email,
         subject: `${type} Verification OTP - CodeDabba`,
         html: `<div style="font-family: Arial, sans-serif; padding: 20px;"><h2>CodeDabba Verification</h2><p>Your OTP for ${type.toLowerCase().replace('_', ' ')} is:</p><h1 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h1><p>This OTP is valid for 10 minutes.</p><p>If you did not request this, please ignore this email.</p></div>`,
       });
-      console.log(`[OTP SERVICE] ✅ Email sent successfully to ${email}`);
+      this.logger.log(`✅ Email sent successfully to ${email}`);
     } catch (error) {
-      console.error('[OTP SERVICE] ❌ Email error:', error);
+      this.logger.error('❌ Email error:', error);
       throw new BadRequestException('Failed to send OTP email');
     }
   }

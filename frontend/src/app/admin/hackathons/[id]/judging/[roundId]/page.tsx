@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
-import { NavBar } from "@/components/landing/NavBar";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { Loader2, ArrowLeft, Shield, BarChart3, Users, CheckCircle2, AlertTriangle, ExternalLink, Activity, Trophy } from "lucide-react";
 import { toast } from 'react-hot-toast';
 
@@ -79,10 +77,8 @@ export default function AdminJudgingDashboard() {
     const progress = statusList.length > 0 ? (scoredCount / statusList.length) * 100 : 0;
 
     return (
-        <ProtectedRoute allowedRoles={['ADMIN']}>
-            <div className="min-h-screen bg-black text-white pb-24">
-                <NavBar />
-                <main className="container mx-auto px-6 py-32">
+        <div className="min-h-screen bg-black text-white pb-24">
+            <main className="container mx-auto px-6 py-32">
                     {/* Header */}
                     <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-16">
                         <div className="flex items-center gap-6">
@@ -211,6 +207,5 @@ export default function AdminJudgingDashboard() {
                     </div>
                 </main>
             </div>
-        </ProtectedRoute>
     );
 }

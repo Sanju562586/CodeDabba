@@ -12,6 +12,8 @@ import { CreateUserDto } from '../modules/users/dto/create-user.dto';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { OAuth2Client } from 'google-auth-library';
 import { HackathonsService } from '../modules/hackathons/hackathons.service';
+import { OtpService } from '../modules/otp/otp.service';
+import { OtpType } from '../entities/otp.entity';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +23,7 @@ export class AuthService {
     @InjectRepository(RefreshToken)
     private refreshTokenRepository: Repository<RefreshToken>,
     private readonly hackathonsService: HackathonsService,
+    private readonly otpService: OtpService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -99,7 +102,7 @@ export class AuthService {
         },
         {
           expiresIn: '15m',
-          secret: 'secretKey', // TODO: use env
+          secret: process.env.JWT_SECRET || 'secretKey',
         },
       ),
       this.jwtService.signAsync(
@@ -110,7 +113,7 @@ export class AuthService {
         },
         {
           expiresIn: '7d',
-          secret: 'refreshSecretKey', // TODO: use env
+          secret: process.env.JWT_REFRESH_SECRET || 'refreshSecretKey',
         },
       ),
     ]);
@@ -171,5 +174,28 @@ export class AuthService {
 
   async setPassword(userId: string, password: string) {
     return this.usersService.updatePassword(userId, password);
+  }
+
+  async requestPasswordReset(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      // Return a successful response even if the user doesn't exist to prevent email enumeration
+      return { message: 'If an account exists with this email, an OTP has been sent.' };
+    }
+    await this.otpService.generateAndSendOtp(email, OtpType.FORGOT_PASSWORD);
+    return { message: 'If an account exists with this email, an OTP has been sent.' };
+  }
+
+  async resetPasswordWithOtp(email: string, otp: string, newPassword: string) {
+    const isValid = await this.otpService.verifyOtp(email, otp, OtpType.FORGOT_PASSWORD);
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid or expired OTP');
+    }
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    await this.usersService.updatePassword(user.id, newPassword);
+    return { message: 'Password reset successfully' };
   }
 }

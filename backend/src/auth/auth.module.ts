@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../modules/users/users.module';
 import { HackathonsModule } from '../modules/hackathons/hackathons.module';
+import { OtpModule } from '../modules/otp/otp.module';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants, JwtStrategy } from './jwt.strategy';
@@ -16,6 +17,7 @@ import { RefreshToken } from '../entities/refresh-token.entity';
     TypeOrmModule.forFeature([RefreshToken]),
     UsersModule,
     HackathonsModule,
+    OtpModule,
     PassportModule,
     JwtModule.register({
       secret: jwtConstants.secret,

@@ -1,7 +1,5 @@
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { NavBar } from "@/components/landing/NavBar";
 import { useState } from "react";
 import api from "@/lib/axios";
 import { Plus, Trash2, Save, Info, Calendar, Users, ListChecks, ArrowLeft, Loader2, Sparkles, Wand2, Check, Shield, UserCheck, Clock, MessageSquare, Trophy, CreditCard } from "lucide-react";
@@ -266,10 +264,8 @@ export default function CreateHackathonPage() {
     };
 
     return (
-        <ProtectedRoute allowedRoles={['ADMIN']}>
-            <div className="min-h-screen bg-black text-white">
-                <NavBar />
-                <div className="container mx-auto px-6 py-24">
+        <div className="min-h-screen bg-black text-white">
+            <div className="container mx-auto px-6 py-24">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-12">
                         <div className="flex items-center gap-6">
@@ -888,6 +884,5 @@ export default function CreateHackathonPage() {
                     </div>
                 </div>
             </div>
-        </ProtectedRoute>
     );
 }

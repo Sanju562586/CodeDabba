@@ -151,13 +151,16 @@ function CoursesContent() {
                             href={`/courses/${course.id}`} // We'll implement this next
                             className="group bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden hover:border-violet-500/50 transition-all hover:shadow-2xl hover:shadow-violet-500/10 flex flex-col"
                         >
-                            <div className="aspect-video bg-zinc-800 relative">
-                                {/* Placeholder or Image */}
-                                <div className="absolute inset-0 flex items-center justify-center text-zinc-600">
-                                    <BookOpen className="w-12 h-12 opacity-20" />
-                                </div>
+                            <div className="aspect-video bg-zinc-800 relative overflow-hidden">
+                                {course.thumbnailUrl ? (
+                                    <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-violet-900/40 via-indigo-900/30 to-black flex items-center justify-center">
+                                        <BookOpen className="w-10 h-10 text-violet-500/40" />
+                                    </div>
+                                )}
                                 <div className="absolute top-4 left-4">
-                                    <span className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-xs font-semibold border border-white/10">
+                                    <span className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-xs font-semibold border border-white/10 text-white">
                                         {course.category}
                                     </span>
                                 </div>

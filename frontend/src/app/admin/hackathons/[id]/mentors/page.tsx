@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
-import { NavBar } from "@/components/landing/NavBar";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { Loader2, ArrowLeft, Users, Shield, ShieldCheck, Globe, Target, Trash2, Plus, Info, BarChart3, ChevronRight, Activity } from "lucide-react";
 import { toast } from 'react-hot-toast';
 
@@ -126,10 +124,8 @@ export default function AdminMentorAssignment() {
     );
 
     return (
-        <ProtectedRoute allowedRoles={['ADMIN']}>
-            <div className="min-h-screen bg-black text-white pb-24">
-                <NavBar />
-                <main className="container mx-auto px-6 py-32">
+        <div className="min-h-screen bg-black text-white pb-24">
+            <main className="container mx-auto px-6 py-32">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-16">
                         <div className="flex items-center gap-6">
                             <button onClick={() => router.back()} className="p-4 bg-zinc-900 hover:bg-zinc-800 rounded-2xl text-zinc-400 hover:text-white transition-all">
@@ -299,6 +295,5 @@ export default function AdminMentorAssignment() {
                     </div>
                 </main>
             </div>
-        </ProtectedRoute>
     );
 }
