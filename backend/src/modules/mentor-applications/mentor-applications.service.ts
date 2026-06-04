@@ -170,7 +170,6 @@ export class MentorApplicationsService {
 
   // Helper method for sending emails
   async sendEmail(to: string, subject: string, html: string) {
-    console.log(`[DEV ONLY] Sending email to ${to} with subject: ${subject}`);
     try {
       await this.mailerService.sendMail({
         to,

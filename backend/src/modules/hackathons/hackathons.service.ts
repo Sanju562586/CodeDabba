@@ -647,11 +647,6 @@ export class HackathonsService {
         'You are already registered for this hackathon',
       );
 
-    console.log(
-      `Processing registration for ${user.email} for hackathon ${hackathon.title}`,
-    );
-    console.log('Registration Data:', JSON.stringify(registerDto, null, 2));
-
     // Check if has pending invitations (to prevent double joining)
     const pendingInvite = await this.invitationsRepository.findOne({
       where: {
@@ -820,7 +815,6 @@ export class HackathonsService {
 
   async syncInvitations(userId: string, email: string) {
     // No direct sync needed anymore since we match by email in getInvitations
-    console.log(`Syncing invitations for ${email}`);
   }
 
   async getInvitations(email: string) {
@@ -1295,20 +1289,12 @@ export class HackathonsService {
           await this.performMentorDistribution(hackathonId);
         hackathon.isMentorDistributed = true;
         await hRepo.save(hackathon);
-        console.log(
-          `Automatically distributed teams for hackathon ${hackathonId}:`,
-          distributionResult,
-        );
       } catch (distError) {
         console.error(
           `Automatic distribution failed for ${hackathonId}:`,
           distError,
         );
       }
-
-      console.log(
-        `Finalized teams for hackathon ${hackathonId}. Status: ${hackathon.status}`,
-      );
     });
   }
 
@@ -2632,12 +2618,10 @@ export class HackathonsService {
   }
 
   async getAdminOverview(id: string) {
-    console.log(`[BACKEND DEBUG] Fetching overview for Hackathon ID: ${id}`);
     const hackathon = await this.hackathonsRepository.findOne({
       where: { id },
       relations: ['rounds', 'mentors', 'mentors.mentor'],
     });
-    console.log(`[BACKEND DEBUG] Hackathon found: ${!!hackathon}`);
     if (!hackathon) throw new NotFoundException('Hackathon not found');
 
     const totalParticipants = await this.registrationsRepository.count({
