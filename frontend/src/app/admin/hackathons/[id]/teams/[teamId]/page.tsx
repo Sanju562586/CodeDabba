@@ -338,7 +338,6 @@ export default function TeamDetailsPage() {
                     </div>
                 )}
             </div>
-        </div>
     );
 }
 
