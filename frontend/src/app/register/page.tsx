@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, FormEvent, Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { Input } from "@/components/ui/input";
 import { AuthLayout } from "@/components/AuthLayout";
 import { useAuth } from "@/context/AuthProvider";
-import { ResponsiveRobot } from "@/components/ResponsiveRobot";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useGoogleLogin } from '@react-oauth/google';
 import { toast } from 'react-hot-toast';
+import { FullScreenLoader } from "@/components/ui/full-screen-loader";
+
+function getRoleDashboard(role: string): string {
+    if (role === 'ADMIN') return '/admin/dashboard';
+    if (role === 'MENTOR') return '/mentor/dashboard';
+    return '/student/dashboard';
+}
 
 function RegisterForm() {
     const { user, isLoading: authLoading, login } = useAuth();
@@ -18,25 +24,30 @@ function RegisterForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const roleParam = searchParams.get("role");
+
+    // Redirect already-authenticated users
+    useEffect(() => {
+        if (!authLoading && user) {
+            router.replace(getRoleDashboard(user.role));
+        }
+    }, [user, authLoading, router]);
 
     const googleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
             try {
                 const res = await api.post('/auth/google', { token: tokenResponse.access_token });
                 login(res.data);
+                const userRole = res.data.user.role;
                 if (!res.data.user.password) {
                     router.push("/set-password");
                 } else {
-                    router.push("/dashboard");
+                    router.push(getRoleDashboard(userRole));
                 }
             } catch (error) {
-                console.error(error);
                 toast.error("Google Register Failed");
             }
         },
-        onError: () => console.log('Login Failed'),
+        onError: () => toast.error('Google login failed. Please try again.'),
     });
 
     const [formData, setFormData] = useState({
@@ -46,7 +57,7 @@ function RegisterForm() {
         location: "",
         password: "",
         confirmPassword: "",
-        role: "STUDENT", // Default to STUDENT
+        role: "STUDENT",
     });
     const [loading, setLoading] = useState(false);
     const [otp, setOtp] = useState("");
@@ -64,7 +75,6 @@ function RegisterForm() {
             setOtpSent(true);
             toast.success("OTP sent to your email!");
         } catch (error: any) {
-            console.error(error);
             toast.error("Failed to send OTP: " + (error.response?.data?.message || error.message));
         } finally {
             setLoading(false);
@@ -80,30 +90,23 @@ function RegisterForm() {
                 setOtpVerified(true);
                 toast.success("Email verified successfully!");
             } else {
-                toast.error("Invalid OTP");
+                toast.error("Invalid OTP. Please try again.");
             }
         } catch (error: any) {
-            console.error(error);
             toast.error("Verification failed: " + (error.response?.data?.message || error.message));
         } finally {
             setLoading(false);
         }
     };
 
-    // Redirect if already logged in and fully setup
-    useEffect(() => {
-        if (!authLoading && user) {
-            if (user.password) {
-                router.push("/dashboard");
-            } else {
-                router.push("/set-password");
-            }
-        }
-    }, [user, authLoading, router]);
-
     // Prevent flashing of register form while checking auth
-    if (authLoading || user) {
-        return null; // Or a loading spinner
+    if (authLoading) {
+        return <FullScreenLoader message="Checking session..." />;
+    }
+
+    // Don't render register form for already-authenticated users
+    if (user) {
+        return <FullScreenLoader message="Redirecting to your dashboard..." />;
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -118,36 +121,29 @@ function RegisterForm() {
             return;
         }
 
-        setLoading(true);
-
         if (formData.password !== formData.confirmPassword) {
             toast.error("Passwords do not match!");
-            setLoading(false);
             return;
         }
 
         if (!/^[0-9]{10}$/.test(formData.mobileNumber)) {
-            toast.error("Mobile number must be 10 digits!");
-            setLoading(false);
+            toast.error("Mobile number must be exactly 10 digits!");
             return;
         }
 
-        if (formData.password.length < 6) {
-            toast.error("Password must be at least 6 characters!");
-            setLoading(false);
+        if (formData.password.length < 8) {
+            toast.error("Password must be at least 8 characters!");
             return;
         }
+
+        setLoading(true);
 
         try {
             const { confirmPassword, ...dataToSend } = formData;
-            // Ensure mobileNumber is sent correctly (already validated)
             await api.post('/auth/register', dataToSend);
             toast.success("Welcome! Registration successful. Please login to continue.");
             router.push(`/login`);
         } catch (e: any) {
-            console.error(e);
-
-            // Extract meaningful error message
             let message = "Registration failed";
             if (e.response?.data?.message) {
                 if (Array.isArray(e.response.data.message)) {
@@ -163,12 +159,8 @@ function RegisterForm() {
     };
 
     return (
-        <AuthLayout title="Join CodeDabba" subtitle="Create your account">
+        <AuthLayout title="Join CodeDabba" subtitle="Create your account" robotFocusedField={focusedField}>
             <div className="w-full">
-                {/* Robot Assistant */}
-                <div className="flex justify-center -mt-8 mb-6">
-                    <ResponsiveRobot focusedField={focusedField} />
-                </div>
 
                 <div className="text-center lg:text-left">
                     <h2 className="text-2xl font-bold tracking-tight text-white">
@@ -211,7 +203,7 @@ function RegisterForm() {
                                 onBlur={() => setFocusedField(null)}
                                 required
                                 disabled={otpVerified}
-                                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-violet-500/50"
+                                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-violet-500/50 disabled:opacity-60"
                             />
 
                             {!otpVerified && (
@@ -221,8 +213,9 @@ function RegisterForm() {
                                             type="button"
                                             onClick={handleSendOtp}
                                             disabled={loading || !formData.email}
-                                            className="px-4 py-2 bg-violet-600 text-white rounded-md text-sm hover:bg-violet-700 disabled:opacity-50"
+                                            className="px-4 py-2 bg-violet-600 text-white rounded-md text-sm hover:bg-violet-700 disabled:opacity-50 flex items-center gap-2"
                                         >
+                                            {loading && <Loader2 className="w-3 h-3 animate-spin" />}
                                             Send OTP
                                         </button>
                                     ) : (
@@ -231,15 +224,24 @@ function RegisterForm() {
                                                 placeholder="Enter OTP"
                                                 value={otp}
                                                 onChange={(e) => setOtp(e.target.value)}
+                                                maxLength={6}
                                                 className="bg-zinc-800 border-zinc-700 text-white w-32"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={handleVerifyOtp}
                                                 disabled={loading || !otp}
-                                                className="px-4 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 disabled:opacity-50"
+                                                className="px-4 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                                             >
+                                                {loading && <Loader2 className="w-3 h-3 animate-spin" />}
                                                 Verify
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setOtpSent(false); setOtp(""); }}
+                                                className="px-3 py-2 bg-zinc-800 text-zinc-400 rounded-md text-sm hover:bg-zinc-700"
+                                            >
+                                                Resend
                                             </button>
                                         </>
                                     )}
@@ -247,23 +249,26 @@ function RegisterForm() {
                             )}
 
                             {otpVerified && (
-                                <div className="text-green-400 text-sm font-medium">
-                                    ✓ Email Verified
+                                <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
+                                    <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center">
+                                        <span className="text-[10px]">✓</span>
+                                    </div>
+                                    Email Verified
                                 </div>
                             )}
-                            {/* Role Selection Removed - Defaulting to Student internally */}
 
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
                                     id="mobileNumber"
                                     name="mobileNumber"
                                     placeholder="Mobile Number"
-                                    type="text"
+                                    type="tel"
                                     value={formData.mobileNumber}
                                     onChange={handleChange}
                                     onFocus={() => setFocusedField("mobileNumber")}
                                     onBlur={() => setFocusedField(null)}
                                     required
+                                    maxLength={10}
                                     className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-violet-500/50"
                                 />
                                 <Input
@@ -284,19 +289,21 @@ function RegisterForm() {
                                     <Input
                                         id="password"
                                         name="password"
-                                        placeholder="Password"
+                                        placeholder="Password (min 8 chars)"
                                         type={showPassword ? "text" : "password"}
                                         value={formData.password}
                                         onChange={handleChange}
                                         onFocus={() => setFocusedField("password")}
                                         onBlur={() => setFocusedField(null)}
                                         required
+                                        minLength={8}
                                         className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-violet-500/50 pr-10"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
                                     >
                                         {showPassword ? (
                                             <EyeOff size={20} />
@@ -322,6 +329,7 @@ function RegisterForm() {
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                                        aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                                     >
                                         {showConfirmPassword ? (
                                             <EyeOff size={20} />
@@ -334,28 +342,33 @@ function RegisterForm() {
                         </div>
                     </div>
 
-                    <div className="flex items-center">
+                    <div className="flex items-start gap-2">
                         <input
                             id="terms"
                             name="terms"
                             type="checkbox"
-                            className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-violet-600 focus:ring-violet-600"
+                            className="mt-0.5 h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-violet-600 focus:ring-violet-600"
                             required
                         />
                         <label
                             htmlFor="terms"
-                            className="ml-2 block text-sm text-zinc-400"
+                            className="block text-sm text-zinc-400"
                         >
-                            I agree to the <span className="text-violet-400 cursor-pointer hover:underline">Terms & Conditions</span>
+                            I agree to the <span className="text-zinc-300">Terms of Service</span> and <span className="text-zinc-300">Privacy Policy</span>
                         </label>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full justify-center rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+                        className="w-full justify-center rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4 flex items-center justify-center gap-2"
                     >
-                        {loading ? "Creating Account..." : "Create Account"}
+                        {loading ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Creating Account...
+                            </>
+                        ) : "Create Account"}
                     </button>
                 </form>
 
@@ -372,10 +385,13 @@ function RegisterForm() {
 
                 <div className="grid grid-cols-2 gap-4">
                     <button
-                        className="relative flex items-center justify-center px-4 w-full rounded-lg h-10 font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white transition-colors"
+                        className="relative flex items-center justify-center px-4 w-full rounded-lg h-10 font-medium bg-zinc-800/50 border border-zinc-700/50 text-zinc-500 cursor-not-allowed transition-colors"
                         type="button"
+                        disabled
+                        title="GitHub login coming soon"
                     >
                         GitHub
+                        <span className="ml-2 text-xs text-zinc-600">(Soon)</span>
                     </button>
                     <button
                         className="relative flex items-center justify-center px-4 w-full rounded-lg h-10 font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white transition-colors"
@@ -399,7 +415,7 @@ function RegisterForm() {
 
 export default function RegisterPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<FullScreenLoader message="Loading..." />}>
             <RegisterForm />
         </Suspense>
     );

@@ -36,6 +36,12 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get('me')
+  async getMe(@Request() req) {
+    return req.user;
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Request() req) {
@@ -56,6 +62,19 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @Post('set-password')
   async setPassword(@Request() req, @Body('password') password: string) {
-    return this.authService.setPassword(req.user.sub, password);
+    return this.authService.setPassword(req.user.id, password);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body('email') email: string) {
+    return this.authService.requestPasswordReset(email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: any) {
+    const { email, otp, newPassword } = body;
+    return this.authService.resetPasswordWithOtp(email, otp, newPassword);
   }
 }

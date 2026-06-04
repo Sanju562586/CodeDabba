@@ -8,6 +8,7 @@ import {
   Request,
   Query,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateModuleDto } from './dto/create-module.dto';
@@ -226,5 +227,30 @@ export class CoursesController {
       courseId,
       chapterId,
     );
+  }
+
+  // --- Admin God Mode Endpoints ---
+  @Get('admin/:id/details')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async getAdminCourseDetails(@Param('id') id: string) {
+    return await this.coursesService.getAdminCourseDetails(id);
+  }
+
+  @Delete('admin/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async deleteCourseAdmin(@Param('id') id: string) {
+    return await this.coursesService.deleteCourseAdmin(id);
+  }
+
+  @Delete('admin/:id/enrollments/:userId')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async unenrollStudentAdmin(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return await this.coursesService.unenrollStudentAdmin(id, userId);
   }
 }

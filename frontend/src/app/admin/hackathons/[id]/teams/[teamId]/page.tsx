@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from "@/context/AuthProvider";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { NavBar } from "@/components/landing/NavBar";
 import { 
     ArrowLeft, Users, UserCheck, Shield, ExternalLink, 
     FileText, CheckCircle2, XCircle, AlertCircle, 
     Trophy, Download, Play, Github, Star, Award,
     MessageSquare, Hash, Layers, Layout, ChevronRight,
-    Loader2, Clock
+    Loader2, Clock, Trash2
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/axios";
@@ -88,6 +86,17 @@ export default function TeamDetailsPage() {
         }
     };
 
+    const handleDeleteTeam = async () => {
+        if (!confirm("Are you absolutely sure you want to permanently remove this team? This action cannot be undone.")) return;
+        try {
+            await api.delete(`/hackathons/admin/${hackathonId}/teams/${teamId}`);
+            toast.success("Team removed successfully");
+            router.push(`/admin/hackathons/${hackathonId}`);
+        } catch (error) {
+            toast.error("Failed to remove team");
+        }
+    };
+
     const isAssigned = team?.mentors?.some((m: any) => m.mentorId === user?.id);
     const now = new Date();
     
@@ -100,35 +109,29 @@ export default function TeamDetailsPage() {
     const canEvaluateBase = role === 'MENTOR' && isAssigned && team?.status === 'approved' && team?.hackathon?.status === 'ROUND_EVALUATION';
 
     if (loading) return (
-        <ProtectedRoute allowedRoles={['ADMIN', 'MENTOR']}>
-            <div className="min-h-screen bg-black text-white flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="w-12 h-12 animate-spin text-pink-500" />
-                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Decoding Squad Profile...</p>
-                </div>
+        <div className="min-h-screen bg-black text-white flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <Loader2 className="w-12 h-12 animate-spin text-pink-500" />
+                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Decoding Squad Profile...</p>
             </div>
-        </ProtectedRoute>
+        </div>
     );
 
     if (!team) return (
-        <ProtectedRoute allowedRoles={['ADMIN', 'MENTOR']}>
-            <div className="min-h-screen bg-black text-white flex items-center justify-center">
-                <div className="text-center">
-                    <AlertCircle className="w-16 h-16 text-zinc-900 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-zinc-500 uppercase tracking-tighter">Squad Not Found</h2>
-                    <button onClick={() => router.back()} className="mt-8 text-pink-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all flex items-center gap-2 mx-auto">
-                        <ArrowLeft className="w-4 h-4" />
-                        Retreat to Hub
-                    </button>
-                </div>
+        <div className="min-h-screen bg-black text-white flex items-center justify-center">
+            <div className="text-center">
+                <AlertCircle className="w-16 h-16 text-zinc-900 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-zinc-500 uppercase tracking-tighter">Squad Not Found</h2>
+                <button onClick={() => router.back()} className="mt-8 text-pink-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all flex items-center gap-2 mx-auto">
+                    <ArrowLeft className="w-4 h-4" />
+                    Retreat to Hub
+                </button>
             </div>
-        </ProtectedRoute>
+        </div>
     );
 
     return (
-        <ProtectedRoute allowedRoles={['ADMIN', 'MENTOR']}>
-            <div className="min-h-screen bg-black text-white selection:bg-pink-500/30">
-                <NavBar />
+        <div className="min-h-screen bg-black text-white selection:bg-pink-500/30">
                 
                 <div className="container mx-auto px-6 py-24">
                     {/* 1. TOP BAR */}
@@ -168,6 +171,15 @@ export default function TeamDetailsPage() {
                                  team.status === 'approved' ? (team.hackathon?.status?.toUpperCase() === 'COMPLETED' ? 'Approved (Hackathon Completed)' : 'Approved') : 
                                  (team.hackathon?.status?.toUpperCase() === 'COMPLETED' ? 'Eliminated (Hackathon Completed)' : 'Eliminated')}
                             </span>
+                            {role === 'ADMIN' && (
+                                <button
+                                    onClick={handleDeleteTeam}
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors border border-red-500/20 text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Remove Team
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -326,7 +338,6 @@ export default function TeamDetailsPage() {
                     </div>
                 )}
             </div>
-        </ProtectedRoute>
     );
 }
 

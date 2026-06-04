@@ -7,6 +7,8 @@ import {
   ParseUUIDPipe,
   UseGuards,
   Req,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -51,5 +53,30 @@ export class UsersController {
   @Roles(Role.ADMIN)
   findAllMentors() {
     return this.usersService.findByRole(Role.MENTOR);
+  }
+
+  @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.ADMIN)
+  findAll() {
+    return this.usersService.findAll();
+  }
+
+  @Patch(':id/role')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.ADMIN)
+  updateRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('role') role: string
+  ) {
+    return this.usersService.updateRole(id, role);
+  }
+
+  // --- Admin God Mode Endpoints ---
+  @Delete('admin/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.ADMIN)
+  deleteUserAdmin(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.deleteUserAdmin(id);
   }
 }

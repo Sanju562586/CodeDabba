@@ -397,4 +397,22 @@ export class HackathonsController {
   ) {
     return await this.hackathonsService.getLeaderboard(id, roundId);
   }
+
+  // --- Admin God Mode Endpoints ---
+  @Delete('admin/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async deleteHackathonAdmin(@Param('id') id: string) {
+    return await this.hackathonsService.deleteHackathonAdmin(id);
+  }
+
+  @Delete('admin/:id/teams/:teamId')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async deleteTeamAdmin(
+    @Param('id') id: string,
+    @Param('teamId') teamId: string,
+  ) {
+    return await this.hackathonsService.deleteTeamAdmin(id, teamId);
+  }
 }

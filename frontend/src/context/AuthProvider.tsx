@@ -28,21 +28,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const initAuth = () => {
+        const initAuth = async () => {
             try {
-                // Check for existing session
-                const storedUser = localStorage.getItem('user');
-                const storedRole = localStorage.getItem('user_role');
-                const token = localStorage.getItem('access_token');
+                const token = sessionStorage.getItem('access_token');
+                const storedUser = sessionStorage.getItem('user');
+                const storedRole = sessionStorage.getItem('user_role');
 
-                if (token && storedUser) {
-                    setUser(JSON.parse(storedUser));
-                    setRole(storedRole);
+                if (!token || !storedUser) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Optimistically restore session from sessionStorage (prevents flash on refresh)
+                const parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
+                setRole(storedRole);
+
+                // Validate token against backend to ensure role is current
+                try {
+                    const { data } = await api.get('/auth/me');
+                    if (data && data.id) {
+                        // Role may have changed server-side, always trust server
+                        const serverUser: User = {
+                            id: data.id,
+                            email: data.email,
+                            role: data.role,
+                            name: parsedUser.name, // name is not in JWT payload, keep from sessionStorage
+                        };
+                        setUser(serverUser);
+                        setRole(data.role);
+                        sessionStorage.setItem('user_role', data.role);
+                        sessionStorage.setItem('user', JSON.stringify(serverUser));
+                    }
+                } catch {
+                    // Token is invalid or expired and refresh also failed — clear session
+                    setUser(null);
+                    setRole(null);
+                    sessionStorage.clear();
                 }
             } catch (error) {
                 console.error("Failed to restore validation session:", error);
                 // Clear potentially corrupted data
-                localStorage.clear();
+                sessionStorage.clear();
             } finally {
                 setIsLoading(false);
             }
@@ -59,11 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUser(data.user);
         setRole(data.user.role);
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('refresh_token', data.refresh_token);
-        localStorage.setItem('user_id', data.user.id);
-        localStorage.setItem('user_role', data.user.role);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        sessionStorage.setItem('access_token', data.access_token);
+        sessionStorage.setItem('refresh_token', data.refresh_token);
+        sessionStorage.setItem('user_id', data.user.id);
+        sessionStorage.setItem('user_role', data.user.role);
+        sessionStorage.setItem('user', JSON.stringify(data.user));
     };
 
     const logout = async () => {
@@ -74,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setUser(null);
             setRole(null);
-            localStorage.clear();
+            sessionStorage.clear();
             window.location.href = '/login';
         }
     };

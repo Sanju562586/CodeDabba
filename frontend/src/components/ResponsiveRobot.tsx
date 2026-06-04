@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 
 interface ResponsiveRobotProps {
@@ -8,14 +8,34 @@ interface ResponsiveRobotProps {
 }
 
 export function ResponsiveRobot({ focusedField }: ResponsiveRobotProps) {
-    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0, rawX: 0, rawY: 0 });
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [robotCenter, setRobotCenter] = useState({ x: 0, y: 0 });
+    const [hasMoved, setHasMoved] = useState(false);
+
+    useEffect(() => {
+        const updateCenter = () => {
+            if (containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
+                setRobotCenter({
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                });
+            }
+        };
+        // Delay slightly to ensure layout is done
+        setTimeout(updateCenter, 100);
+        window.addEventListener("resize", updateCenter);
+        return () => window.removeEventListener("resize", updateCenter);
+    }, []);
 
     // Track mouse movement
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
+            setHasMoved(true);
             const x = (e.clientX - window.innerWidth / 2) / (window.innerWidth / 2);
             const y = (e.clientY - window.innerHeight / 2) / (window.innerHeight / 2);
-            setMousePosition({ x, y });
+            setMousePosition({ x, y, rawX: e.clientX, rawY: e.clientY });
         };
 
         window.addEventListener("mousemove", handleMouseMove);
@@ -25,18 +45,40 @@ export function ResponsiveRobot({ focusedField }: ResponsiveRobotProps) {
     const isBlindfolded = focusedField === "password" || focusedField === "confirmPassword";
 
     // Head rotation (Center when blindfolded)
-    const headX = isBlindfolded ? 0 : mousePosition.x * 5;
-    const headY = isBlindfolded ? 10 : mousePosition.y * 5; // Look slightly down when blindfolded
+    const headX = isBlindfolded ? 0 : mousePosition.x * 10;
+    const headY = isBlindfolded ? 10 : mousePosition.y * 10;
 
     // Eye movement
-    const eyeX = isBlindfolded ? 0 : mousePosition.x * 12;
-    const eyeY = isBlindfolded ? 0 : (focusedField ? 8 : mousePosition.y * 10);
+    const eyeX = isBlindfolded ? 0 : mousePosition.x * 18;
+    const eyeY = isBlindfolded ? 0 : (focusedField ? 8 : mousePosition.y * 15);
+
+    // Calculate arm angles pointing to cursor
+    const dx = mousePosition.rawX - robotCenter.x;
+    const dy = mousePosition.rawY - robotCenter.y;
+    
+    // Normalize function
+    const normalizeAngle = (angle: number) => {
+        let a = angle % 360;
+        if (a < -180) a += 360;
+        if (a > 180) a -= 360;
+        return a;
+    };
+
+    let targetAngle = (Math.atan2(dy, dx) * 180) / Math.PI - 90;
+    targetAngle = normalizeAngle(targetAngle);
+
+    // If mouse hasn't moved, use rest position (10 / -10)
+    const baseLeftAngle = hasMoved ? targetAngle : 10;
+    const baseRightAngle = hasMoved ? targetAngle : -10;
+
+    const finalLeftAngle = isBlindfolded ? 170 : baseLeftAngle;
+    const finalRightAngle = isBlindfolded ? -170 : baseRightAngle;
 
     return (
-        <div className="w-48 h-48 mx-auto -mb-4 relative z-10">
+        <div ref={containerRef} className="w-full h-full max-h-[350px] relative z-10 flex justify-center items-center">
             <svg
                 viewBox="0 0 200 240"
-                className="w-full h-full drop-shadow-2xl"
+                className="w-full h-full drop-shadow-2xl max-w-sm"
                 style={{ overflow: "visible" }}
             >
                 <defs>
@@ -125,13 +167,9 @@ export function ResponsiveRobot({ focusedField }: ResponsiveRobotProps) {
                 <g transform="translate(45, 140)"> {/* Move to Left Shoulder Position */}
                     <motion.g
                         initial={{ rotate: 0 }}
-                        animate={{
-                            rotate: isBlindfolded ? 170 : 10, // Rotate around (0,0) which is now physically at shoulder
-                        }}
+                        animate={{ rotate: finalLeftAngle }}
                         transition={{ type: "spring", stiffness: 120, damping: 15 }}
                     >
-                        {/* Arms drawn relative to 0,0 (shoulder connection point) */}
-                        {/* x=-15 centers the arm width (30) on 0. y=0 starts it at shoulder */}
                         <g transform="translate(-15, 0)">
                             {/* Arm Segment */}
                             <rect x="0" y="0" width="30" height="80" rx="15" fill="url(#bodyGradient)" stroke="#52525b" />
@@ -145,12 +183,9 @@ export function ResponsiveRobot({ focusedField }: ResponsiveRobotProps) {
                 <g transform="translate(155, 140)"> {/* Move to Right Shoulder Position */}
                     <motion.g
                         initial={{ rotate: 0 }}
-                        animate={{
-                            rotate: isBlindfolded ? -170 : -10, // Rotate around 0,0
-                        }}
+                        animate={{ rotate: finalRightAngle }}
                         transition={{ type: "spring", stiffness: 120, damping: 15 }}
                     >
-                        {/* Arms drawn relative to 0,0 (shoulder connection point) */}
                         <g transform="translate(-15, 0)">
                             {/* Arm Segment */}
                             <rect x="0" y="0" width="30" height="80" rx="15" fill="url(#bodyGradient)" stroke="#52525b" />

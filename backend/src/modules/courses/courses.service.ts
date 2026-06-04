@@ -1044,4 +1044,71 @@ export class CoursesService {
 
     return uniqueSlug;
   }
+
+  // --- Admin God Mode Functions ---
+  async getAdminCourseDetails(courseId: string): Promise<any> {
+    const course = await this.coursesRepository.findOne({
+      where: { id: courseId },
+      relations: ['mentor'],
+    });
+
+    if (!course) throw new NotFoundException('Course not found');
+
+    const enrollments = await this.enrollmentsRepository.find({
+      where: { courseId },
+      relations: ['user'],
+    });
+
+    const students = enrollments.map((e) => ({
+      userId: e.user.id,
+      name: e.user.name,
+      email: e.user.email,
+      enrolledAt: e.createdAt,
+      status: e.status,
+    }));
+
+    return {
+      course,
+      mentor: course.mentor,
+      students,
+    };
+  }
+
+  async deleteCourseAdmin(courseId: string): Promise<{ message: string }> {
+    const course = await this.coursesRepository.findOne({
+      where: { id: courseId },
+    });
+    if (!course) throw new NotFoundException('Course not found');
+
+    // Due to Cascade options in entities, deleting the course should delete modules, chapters, blocks, enrollments, and progress.
+    // However, if relations are not properly cascaded, this might fail. We'll attempt a direct delete.
+    await this.coursesRepository.remove(course);
+
+    return { message: 'Course successfully deleted.' };
+  }
+
+  async unenrollStudentAdmin(
+    courseId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
+    const enrollment = await this.enrollmentsRepository.findOne({
+      where: { courseId, userId },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('Enrollment not found');
+    }
+
+    await this.enrollmentsRepository.remove(enrollment);
+
+    // Optionally, clean up progress as well
+    const progress = await this.progressRepository.findOne({
+      where: { courseId, userId },
+    });
+    if (progress) {
+      await this.progressRepository.remove(progress);
+    }
+
+    return { message: 'Student successfully unenrolled.' };
+  }
 }

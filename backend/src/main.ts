@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+// Trigger backend restart to load latest .env
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
@@ -38,6 +39,7 @@ async function bootstrap() {
       origin: allowedOrigins,
       credentials: true,
     });
+    app.setGlobalPrefix('api/v1');
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
     const port = process.env.PORT || 3000;

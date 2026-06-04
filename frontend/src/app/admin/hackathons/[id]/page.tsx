@@ -3,15 +3,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from "@/context/AuthProvider";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { NavBar } from "@/components/landing/NavBar";
 import { 
     Users, Trophy, FileText, Settings, Shield, Clock, 
     ArrowLeft, CheckCircle2, XCircle, AlertCircle, 
     ExternalLink, Search, Filter, Mail, Award,
     LogOut, MoreHorizontal, Download, Eye, Edit3,
     Calendar, UserCheck, MessageSquare, Plus, Loader2,
-    ShieldAlert, Send, Zap, Activity, User, Monitor
+    ShieldAlert, Send, Zap, Activity, User, Monitor, Trash2
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/axios";
@@ -41,11 +39,7 @@ interface HackathonStats {
 }
 
 export default function AdminHackathonDetailPage() {
-    return (
-        <ProtectedRoute allowedRoles={['ADMIN', 'MENTOR']}>
-            <AdminHackathonDetailContent />
-        </ProtectedRoute>
-    );
+    return <AdminHackathonDetailContent />;
 }
 
 function AdminHackathonDetailContent() {
@@ -75,6 +69,17 @@ function AdminHackathonDetailContent() {
             toast.error("Failed to load dashboard - Operational failure logged.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteHackathon = async () => {
+        if (!confirm("Are you absolutely sure you want to permanently delete this hackathon? This will remove all teams, rounds, and submissions.")) return;
+        try {
+            await api.delete(`/hackathons/admin/${id}`);
+            toast.success("Hackathon deleted successfully");
+            router.push('/admin/hackathons');
+        } catch (error) {
+            toast.error("Failed to delete hackathon");
         }
     };
 
@@ -114,7 +119,6 @@ function AdminHackathonDetailContent() {
 
     return (
         <div className="min-h-screen bg-black text-white selection:bg-pink-500 selection:text-white pb-24">
-                <NavBar />
                 
                 <div className="pt-24 pb-12 px-6 container mx-auto">
                     {/* Header (Top Strip) */}
@@ -133,9 +137,20 @@ function AdminHackathonDetailContent() {
                                  hackathon?.status.replace('_', ' ').toUpperCase()}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Shield className="w-3.5 h-3.5 text-zinc-600" />
-                            <p className="text-zinc-600 text-[10px] font-medium tracking-widest uppercase">ID: <span className="text-zinc-500 font-mono lowercase">{id}</span></p>
+                        <div className="flex flex-col md:flex-row items-end md:items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <Shield className="w-3.5 h-3.5 text-zinc-600" />
+                                <p className="text-zinc-600 text-[10px] font-medium tracking-widest uppercase">ID: <span className="text-zinc-500 font-mono lowercase">{id}</span></p>
+                            </div>
+                            {role === 'ADMIN' && (
+                                <button
+                                    onClick={handleDeleteHackathon}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors border border-red-500/20 text-xs font-bold uppercase tracking-widest"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete Hackathon
+                                </button>
+                            )}
                         </div>
                     </div>
 

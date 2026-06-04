@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
-import { NavBar } from "@/components/landing/NavBar";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { Loader2, ArrowLeft, Trophy, Users, CheckCircle, XCircle, AlertCircle, MessageSquare } from "lucide-react";
 import { toast } from 'react-hot-toast';
 
@@ -82,10 +80,8 @@ export default function AdminTeamApproval() {
     );
 
     return (
-        <ProtectedRoute allowedRoles={['ADMIN', 'MENTOR']}>
-            <div className="min-h-screen bg-black text-white">
-                <NavBar />
-                <main className="container mx-auto px-6 py-32">
+        <div className="min-h-screen bg-black text-white">
+            <main className="container mx-auto px-6 py-32">
                     <div className="flex items-center gap-6 mb-12">
                         <button onClick={() => router.back()} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-all">
                             <ArrowLeft className="w-6 h-6" />
@@ -193,8 +189,7 @@ export default function AdminTeamApproval() {
                             ))}
                         </div>
                     )}
-                </main>
-            </div>
-        </ProtectedRoute>
+            </main>
+        </div>
     );
 }

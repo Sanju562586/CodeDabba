@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -13,6 +13,11 @@ export class UsersService {
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
+    const existingUser = await this.findByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new ConflictException('Email already in use');
+    }
+
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
     const user = this.usersRepository.create({
       ...createUserDto,
@@ -67,5 +72,26 @@ export class UsersService {
 
   async findByRole(role: any): Promise<User[]> {
     return this.usersRepository.find({ where: { role } });
+  }
+
+  async findAll(): Promise<User[]> {
+    return this.usersRepository.find({
+      order: { createdAt: 'DESC' },
+      select: ['id', 'email', 'name', 'role', 'mobileNumber', 'createdAt'] // exclude password
+    });
+  }
+
+  // --- Admin God Mode Functions ---
+  async deleteUserAdmin(id: string): Promise<{ message: string }> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Attempting a direct hard delete. With correct cascade settings, related data should be removed.
+    // However, if there are orphaned foreign keys, this may fail and require manual cleanup in a real scenario.
+    await this.usersRepository.remove(user);
+
+    return { message: 'User successfully deleted.' };
   }
 }

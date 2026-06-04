@@ -2,75 +2,92 @@
 
 import { useAuth } from "@/context/AuthProvider";
 import { useState, FormEvent, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { useGoogleLogin } from '@react-oauth/google';
 import { AuthLayout } from "@/components/AuthLayout";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from 'react-hot-toast';
-import { Loader2 } from "lucide-react";
 import { FullScreenLoader } from "@/components/ui/full-screen-loader";
 
-import { ResponsiveRobot } from "@/components/ResponsiveRobot";
+function getRoleDashboard(role: string): string {
+    if (role === 'ADMIN') return '/admin/dashboard';
+    if (role === 'MENTOR') return '/mentor/dashboard';
+    return '/student/dashboard';
+}
 
 function LoginForm() {
     const { login, user, isLoading: authLoading } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [focusedField, setFocusedField] = useState<string | null>(null);
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const roleParam = searchParams.get("role");
+
+    // Redirect already-authenticated users to their dashboard
+    useEffect(() => {
+        if (!authLoading && user) {
+            router.replace(getRoleDashboard(user.role));
+        }
+    }, [user, authLoading, router]);
 
     const googleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
             try {
                 const res = await api.post('/auth/google', { token: tokenResponse.access_token });
                 login(res.data);
+                const userRole = res.data.user.role;
                 const userName = res.data.user.name || "User";
-                toast.success(`Hello, ${userName}`, { duration: 3000 });
-                router.push("/dashboard"); // Directly go to dashboard on login, skip password set
+                toast.success(`Welcome back, ${userName}!`, { duration: 3000 });
+                router.push(getRoleDashboard(userRole));
             } catch (error) {
                 console.error(error);
-                toast.error("Google Login Failed");
+                setError("Google Login Failed. Please try again.");
             }
         },
-        onError: () => console.log('Login Failed'),
+        onError: () => setError('Google Login Failed.'),
     });
 
-    // Redirect if already logged in
-    useEffect(() => {
-        if (!authLoading && user) {
-            if (user.role === 'ADMIN') router.push("/admin/dashboard");
-            else if (user.role === 'MENTOR') router.push("/mentor/dashboard");
-            else router.push("/dashboard"); // Default to student dashboard
-        }
-    }, [user, authLoading, router]);
-
     // Prevent flashing of login form while checking auth
-    if (authLoading || user) {
-        return null;
+    if (authLoading) {
+        return <FullScreenLoader message="Checking session..." />;
+    }
+
+    // Don't render login form for already-authenticated users
+    if (user) {
+        return <FullScreenLoader message="Redirecting to your dashboard..." />;
     }
 
     const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
 
         try {
             const response = await api.post('/auth/login', { email, password });
             login(response.data);
             const userName = response.data.user.name || "User";
-            toast.success(`Hello, ${userName}`, { duration: 3000 });
-            // Redirection handled by useEffect or could be done here immediately
+            toast.success(`Welcome back, ${userName}!`, { duration: 3000 });
+
+            // Role-aware redirect
+            const userRole = response.data.user.role;
+            router.push(getRoleDashboard(userRole));
         } catch (e: unknown) {
-            console.error(e);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            toast.error((e as any).response?.data?.message || "Login failed");
+            const errorMsg = (e as any).response?.data?.message;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const status = (e as any).response?.status;
+            if (status === 500) {
+                setError("Server error occurred. Please try again later.");
+            } else if (!status) {
+                setError("Network error. Please check your connection or try again later.");
+            } else {
+                setError(errorMsg || "Incorrect email or password. Please try again.");
+            }
         } finally {
             setLoading(false);
         }
@@ -80,33 +97,20 @@ function LoginForm() {
         <AuthLayout
             title="Welcome Back"
             subtitle="Sign in to continue your journey with CodeDabba."
+            robotFocusedField={focusedField}
         >
             {loading && <FullScreenLoader message="Signing in..." />}
 
-            {/* Robot Assistant */}
-            <div className="flex justify-center -mt-8">
-                <ResponsiveRobot focusedField={focusedField} />
-            </div>
+            {error && (
+                <div className="mt-6 flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <p>{error}</p>
+                </div>
+            )}
 
-            <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-bold tracking-tight text-white">
-                    Sign in to your account
-                </h2>
-                <p className="mt-2 text-sm text-zinc-400">
-                    Don't have an account?{" "}
-                    <Link
-                        href="/register"
-                        className="font-medium text-violet-400 hover:text-violet-300 transition-colors"
-                    >
-                        Register
-                    </Link>
-                </p>
-            </div>
-
-            <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+            <form className="mt-6 space-y-6" onSubmit={handleLogin}>
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        {/* <Label htmlFor="email" className="text-zinc-300">Email Address</Label> */}
                         <Input
                             id="email"
                             placeholder="Email"
@@ -120,7 +124,6 @@ function LoginForm() {
                         />
                     </div>
                     <div className="space-y-2">
-                        {/* <Label htmlFor="password" className="text-zinc-300">Password</Label> */}
                         <div className="relative">
                             <Input
                                 id="password"
@@ -137,6 +140,7 @@ function LoginForm() {
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                                aria-label={showPassword ? "Hide password" : "Show password"}
                             >
                                 {showPassword ? (
                                     <EyeOff size={20} />
@@ -149,28 +153,18 @@ function LoginForm() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                        <input
-                            id="remember-me"
-                            name="remember-me"
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-violet-600 focus:ring-violet-600"
-                        />
-                        <label
-                            htmlFor="remember-me"
-                            className="ml-2 block text-sm text-zinc-400"
-                        >
-                            I agree to the <span className="text-violet-400 cursor-pointer hover:underline">Terms & Conditions</span>
-                        </label>
+                    <div className="text-sm text-zinc-500">
+                        By signing in, you agree to our{" "}
+                        <span className="text-zinc-400">Terms of Service</span>
                     </div>
 
                     <div className="text-sm">
-                        <a
-                            href="#"
-                            className="font-medium text-violet-400 hover:text-violet-300"
+                        <Link
+                            href="/forgot-password"
+                            className="font-medium text-violet-400 hover:text-violet-300 transition-colors"
                         >
                             Forgot password?
-                        </a>
+                        </Link>
                     </div>
                 </div>
 
@@ -179,7 +173,11 @@ function LoginForm() {
                     disabled={loading}
                     className="w-full justify-center rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    {loading ? "Signing in..." : "Sign In"}
+                    {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Signing in...
+                        </span>
+                    ) : "Sign In"}
                 </button>
             </form>
 
@@ -196,10 +194,13 @@ function LoginForm() {
 
             <div className="grid grid-cols-2 gap-4">
                 <button
-                    className="relative flex items-center justify-center px-4 w-full rounded-lg h-10 font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white transition-colors"
+                    className="relative flex items-center justify-center px-4 w-full rounded-lg h-10 font-medium bg-zinc-800/50 border border-zinc-700/50 text-zinc-500 cursor-not-allowed transition-colors"
                     type="button"
+                    disabled
+                    title="GitHub login coming soon"
                 >
                     GitHub
+                    <span className="ml-2 text-xs text-zinc-600">(Soon)</span>
                 </button>
                 <button
                     className="relative flex items-center justify-center px-4 w-full rounded-lg h-10 font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white transition-colors"
@@ -211,9 +212,9 @@ function LoginForm() {
             </div>
 
             <div className="mt-8 text-center text-sm text-zinc-400">
-                Don&apos;t have an account?{" "}
+                New to CodeDabba?{" "}
                 <Link href="/register" className="font-medium text-violet-400 hover:text-violet-300 transition-colors">
-                    Register
+                    Create a free account →
                 </Link>
             </div>
         </AuthLayout>
@@ -222,7 +223,7 @@ function LoginForm() {
 
 export default function LoginPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<FullScreenLoader message="Loading..." />}>
             <LoginForm />
         </Suspense>
     );
