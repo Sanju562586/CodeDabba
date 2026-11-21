@@ -21,7 +21,7 @@ export function HeroSection() {
             {/* Grid Pattern */}
             <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-30" />
 
-            <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-12 items-center py-16">
+            <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-6 md:gap-12 items-center py-16">
 
                 {/* Text Content */}
                 <motion.div

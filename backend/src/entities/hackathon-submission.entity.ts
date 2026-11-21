@@ -12,7 +12,6 @@ import { HackathonTeam } from './hackathon-team.entity';
 import { HackathonRound } from './hackathon-round.entity';
 import { User } from './user.entity';
 
-
 @Entity('hackathon_submissions')
 @Index(['teamId', 'roundId'], { unique: true })
 @Index(['roundId'])
@@ -41,8 +40,6 @@ export class HackathonSubmission {
   @JoinColumn({ name: 'roundId' })
   round: HackathonRound;
 
-
-
   @Column({ nullable: true })
   documentUrl: string;
 
@@ -54,8 +51,6 @@ export class HackathonSubmission {
 
   @Column('text', { nullable: true })
   description: string;
-
-
 
   @CreateDateColumn()
   submittedAt: Date;
@@ -82,4 +77,3 @@ export class HackathonSubmission {
   @Column({ nullable: true })
   evaluatedAt: Date;
 }
-

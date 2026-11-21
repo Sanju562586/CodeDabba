@@ -87,7 +87,7 @@ export default function HackathonManagement() {
             </div>
 
             {hackathons.length === 0 ? (
-                <div className="text-center py-24 bg-zinc-900/30 border border-zinc-800 rounded-[2rem] border-dashed">
+                <div className="text-center py-8 md:py-24 bg-zinc-900/30 border border-zinc-800 rounded-[2rem] border-dashed">
                     <Award className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-zinc-500 mb-2">No active projects</h2>
                     <p className="text-zinc-600">The arena is empty. Start your first competition.</p>

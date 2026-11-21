@@ -206,7 +206,12 @@ export default function HackathonDetailsPage() {
                 // Initialize payment
                 const { data } = await api.post(`/payments/registration`, { hackathonId: id });
                 if (data.status === 'success') {
-                    handlePayment(data.payment.id, hackathon.title, name, user?.email);
+                    if (data.alreadyPaid) {
+                        toast.success("Payment verified! Finalizing registration...");
+                        await executeBackendRegistration();
+                    } else {
+                        handlePayment(data.payment.id, hackathon.title, name, user?.email);
+                    }
                 } else {
                     toast.error("Failed to initialize payment");
                     setRegistering(false);

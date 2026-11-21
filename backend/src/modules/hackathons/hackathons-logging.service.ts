@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { HackathonActivityLog, ActivityType, LogStatus } from '../../entities/hackathon-activity-log.entity';
+import {
+  HackathonActivityLog,
+  ActivityType,
+  LogStatus,
+} from '../../entities/hackathon-activity-log.entity';
 import { User } from '../../entities/user.entity';
 
 @Injectable()

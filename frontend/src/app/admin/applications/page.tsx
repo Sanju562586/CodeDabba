@@ -59,7 +59,7 @@ export default function MentorApplicationsPage() {
 
     return (
         <div className="w-full">
-            <div className="container mx-auto px-6 py-24">
+            <div className="container mx-auto px-6 py-8 md:py-24">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-pink-500 mb-2">Mentor Applications</h1>
                     <p className="text-zinc-400">Review and manage incoming mentor applications.</p>

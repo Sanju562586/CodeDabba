@@ -11,7 +11,7 @@ export default function AdminReviewsPage() {
 
     return (
         <div className="w-full">
-            <div className="container mx-auto px-6 py-24">
+            <div className="container mx-auto px-6 py-8 md:py-24">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-pink-500 mb-2">Course Reviews</h1>
                     <p className="text-zinc-400">Review pending curriculum and content submissions.</p>
@@ -71,7 +71,7 @@ function CourseReviewList({ phase }: { phase: 'curriculum' | 'content' }) {
     if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-pink-500" /></div>;
 
     if (courses.length === 0) return (
-        <div className="text-center py-24 bg-zinc-900/30 border border-zinc-800 rounded-3xl border-dashed">
+        <div className="text-center py-8 md:py-24 bg-zinc-900/30 border border-zinc-800 rounded-3xl border-dashed">
             <h2 className="text-xl font-bold text-zinc-500 mb-2">All caught up!</h2>
             <p className="text-zinc-600">No {phase} reviews pending at the moment.</p>
         </div>

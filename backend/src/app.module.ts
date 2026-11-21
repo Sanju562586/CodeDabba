@@ -75,7 +75,10 @@ const logger = new Logger('AppModule');
           socketTimeout: 60_000,
         },
         defaults: {
-          from: configService.get('MAIL_FROM', '"CodeDabba" <noreply@codedabba.com>'),
+          from: configService.get(
+            'MAIL_FROM',
+            '"CodeDabba" <noreply@codedabba.com>',
+          ),
         },
       }),
     }),
@@ -85,22 +88,44 @@ const logger = new Logger('AppModule');
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const url = configService.get<string>('DATABASE_URL');
-        if (!url) throw new Error('DATABASE_URL environment variable is not defined');
+        if (!url)
+          throw new Error('DATABASE_URL environment variable is not defined');
 
         return {
           type: 'postgres',
           url,
           entities: [
-            User, StudentProfile, MentorProfile,
-            RefreshToken, Otp, File, MentorApplication,
-            Course, CourseModule, Chapter, LessonBlock,
-            Task, TaskOption, TestCase,
-            Submission, Enrollment, Progress, Certificate,
-            Hackathon, HackathonRound, HackathonRegistration,
-            HackathonTeam, HackathonTeamInvitation, HackathonTeamMember,
-            HackathonTeamMentorAssignment, HackathonMentor,
-            HackathonSubmission, HackathonScore,
-            HackathonLeaderboard, HackathonActivityLog, HackathonPayment,
+            User,
+            StudentProfile,
+            MentorProfile,
+            RefreshToken,
+            Otp,
+            File,
+            MentorApplication,
+            Course,
+            CourseModule,
+            Chapter,
+            LessonBlock,
+            Task,
+            TaskOption,
+            TestCase,
+            Submission,
+            Enrollment,
+            Progress,
+            Certificate,
+            Hackathon,
+            HackathonRound,
+            HackathonRegistration,
+            HackathonTeam,
+            HackathonTeamInvitation,
+            HackathonTeamMember,
+            HackathonTeamMentorAssignment,
+            HackathonMentor,
+            HackathonSubmission,
+            HackathonScore,
+            HackathonLeaderboard,
+            HackathonActivityLog,
+            HackathonPayment,
           ],
           synchronize: true, // Dev only — use migrations in production
           ssl: { rejectUnauthorized: false },

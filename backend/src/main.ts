@@ -9,12 +9,17 @@ import * as dns from 'dns';
 
 // Validate critical environment variables
 const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
-  console.error('❌ CRITICAL: Missing required environment variables:', missingEnvVars);
-  console.error('Please set the following environment variables before starting the application:');
-  missingEnvVars.forEach(envVar => console.error(`  - ${envVar}`));
+  console.error(
+    '❌ CRITICAL: Missing required environment variables:',
+    missingEnvVars,
+  );
+  console.error(
+    'Please set the following environment variables before starting the application:',
+  );
+  missingEnvVars.forEach((envVar) => console.error(`  - ${envVar}`));
   process.exit(1);
 }
 
@@ -32,8 +37,14 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
     const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
-      ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
-      : ['http://localhost:3000', 'http://localhost:3001', 'https://code-dabba.vercel.app'];
+      ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((origin) =>
+          origin.trim(),
+        )
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001',
+          'https://code-dabba.vercel.app',
+        ];
 
     app.enableCors({
       origin: allowedOrigins,

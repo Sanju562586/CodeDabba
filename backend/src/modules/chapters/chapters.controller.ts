@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ChaptersService } from './chapters.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
+import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../entities/user.entity';
@@ -33,9 +34,13 @@ export class ChaptersController {
   }
 
   @Get('content/:id')
-  // No RolesGuard here, allow student role too
+  @UseGuards(OptionalAuthGuard)
   async findContent(@Request() req: any, @Param('id') id: string) {
-    return this.chaptersService.getChapterContentForStudent(id, req.user?.id);
+    return this.chaptersService.getChapterContentForStudent(
+      id,
+      req.user?.id,
+      req.user?.role,
+    );
   }
 
   @Post(':id/blocks')

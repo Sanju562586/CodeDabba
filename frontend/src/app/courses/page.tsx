@@ -128,11 +128,11 @@ function CoursesContent() {
 
             {/* Course Grid */}
             {loading ? (
-                <div className="flex justify-center py-24">
+                <div className="flex justify-center py-8 md:py-24">
                     <Loader2 className="w-12 h-12 animate-spin text-violet-500" />
                 </div>
             ) : courses.length === 0 ? (
-                <div className="text-center py-24">
+                <div className="text-center py-8 md:py-24">
                     <BookOpen className="w-16 h-16 text-zinc-700 mx-auto mb-6" />
                     <h3 className="text-2xl font-bold text-white mb-2">No courses found</h3>
                     <p className="text-zinc-400">Try adjusting your filters or search terms.</p>

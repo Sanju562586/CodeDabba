@@ -265,7 +265,7 @@ export default function CreateHackathonPage() {
 
     return (
         <div className="min-h-screen bg-black text-white">
-            <div className="container mx-auto px-6 py-24">
+            <div className="container mx-auto px-6 py-8 md:py-24">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-12">
                         <div className="flex items-center gap-6">
@@ -290,7 +290,7 @@ export default function CreateHackathonPage() {
                         </button>
                     </div>
 
-                    <div className="grid lg:grid-cols-4 gap-12">
+                    <div className="grid lg:grid-cols-4 gap-6 md:gap-12">
                         {/* Sidebar Navigation */}
                         <aside className="space-y-2">
                             <button

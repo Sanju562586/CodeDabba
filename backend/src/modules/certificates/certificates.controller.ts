@@ -17,14 +17,23 @@ export class CertificatesController {
 
   @Post(':hackathonId')
   @UseGuards(AuthGuard)
-  async generate(@Request() req: any, @Param('hackathonId') hackathonId: string) {
+  async generate(
+    @Request() req: any,
+    @Param('hackathonId') hackathonId: string,
+  ) {
     return await this.certificatesService.generate(req.user.id, hackathonId);
   }
 
   @Post('course/:courseId')
   @UseGuards(AuthGuard)
-  async generateCourseCertificate(@Request() req: any, @Param('courseId') courseId: string) {
-    return await this.certificatesService.generateCourseCertificate(req.user.id, courseId);
+  async generateCourseCertificate(
+    @Request() req: any,
+    @Param('courseId') courseId: string,
+  ) {
+    return await this.certificatesService.generateCourseCertificate(
+      req.user.id,
+      courseId,
+    );
   }
 
   @Get('my')
@@ -37,12 +46,15 @@ export class CertificatesController {
   @Get('verify/:id')
   async verify(@Param('id') id: string) {
     const cert = await this.certificatesService.verify(id);
-    if (!cert) throw new NotFoundException('Certification record not verified in registry.');
+    if (!cert)
+      throw new NotFoundException(
+        'Certification record not verified in registry.',
+      );
     return cert;
   }
 
   @Get(':id/download')
   async downloadCertificate(@Param('id') id: string, @Res() res: any) {
-     return await this.certificatesService.streamCertificatePDF(id, res);
+    return await this.certificatesService.streamCertificatePDF(id, res);
   }
 }

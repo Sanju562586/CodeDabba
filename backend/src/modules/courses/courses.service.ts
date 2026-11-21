@@ -152,7 +152,11 @@ export class CoursesService {
     return { data: dataWithEnrollment, total, page: +page, limit: +limit };
   }
 
-  async enroll(userId: string, courseId: string, skipPaymentCheck = false): Promise<Enrollment> {
+  async enroll(
+    userId: string,
+    courseId: string,
+    skipPaymentCheck = false,
+  ): Promise<Enrollment> {
     const course = await this.coursesRepository.findOne({
       where: { id: courseId },
       relations: ['modules', 'modules.chapters'],
@@ -164,7 +168,9 @@ export class CoursesService {
     }
 
     if (!skipPaymentCheck && course.accessType === CourseAccessType.PAID) {
-      throw new BadRequestException('Please purchase this course before enrollment.');
+      throw new BadRequestException(
+        'Please purchase this course before enrollment.',
+      );
     }
 
     const existing = await this.enrollmentsRepository.findOne({
@@ -234,7 +240,7 @@ export class CoursesService {
     return { data, total, page: +page, limit: +limit };
   }
 
-  async findOne(id: string, userId?: string): Promise<any> {
+  async findOne(id: string, userId?: string, role?: string): Promise<any> {
     const course = await this.coursesRepository.findOne({
       where: { id },
       relations: [
@@ -293,8 +299,10 @@ export class CoursesService {
       }
     }
 
-    // Secure content: If not enrolled, strip blocks and tasks from non-free chapters
-    if (!isEnrolled) {
+    // Secure content: If not enrolled and not mentor/admin, strip blocks and tasks from non-free chapters
+    const isMentorOrAdmin =
+      userId && (course.mentorId === userId || role === Role.ADMIN);
+    if (!isEnrolled && !isMentorOrAdmin) {
       course.modules.forEach((module) => {
         if (module.chapters) {
           module.chapters.forEach((chapter) => {
@@ -583,17 +591,25 @@ export class CoursesService {
 
     await this.modulesRepository.manager.transaction(
       async (transactionalEntityManager) => {
-        for (const item of items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
           const result = await transactionalEntityManager.update(
             CourseModule,
             { id: item.id, courseId },
-            { orderIndex: item.orderIndex },
+            { orderIndex: -(i + 1000) },
           );
           if (result.affected === 0) {
             throw new BadRequestException(
               `Module ${item.id} does not belong to course ${courseId} or does not exist`,
             );
           }
+        }
+        for (const item of items) {
+          await transactionalEntityManager.update(
+            CourseModule,
+            { id: item.id, courseId },
+            { orderIndex: item.orderIndex },
+          );
         }
       },
     );
@@ -639,17 +655,25 @@ export class CoursesService {
 
     await this.chaptersRepository.manager.transaction(
       async (transactionalEntityManager) => {
-        for (const item of items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
           const result = await transactionalEntityManager.update(
             Chapter,
             { id: item.id, moduleId },
-            { orderIndex: item.orderIndex },
+            { orderIndex: -(i + 1000) },
           );
           if (result.affected === 0) {
             throw new BadRequestException(
               `Chapter ${item.id} does not belong to module ${moduleId} or does not exist`,
             );
           }
+        }
+        for (const item of items) {
+          await transactionalEntityManager.update(
+            Chapter,
+            { id: item.id, moduleId },
+            { orderIndex: item.orderIndex },
+          );
         }
       },
     );
@@ -691,17 +715,25 @@ export class CoursesService {
 
     await this.blocksRepository.manager.transaction(
       async (transactionalEntityManager) => {
-        for (const item of items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
           const result = await transactionalEntityManager.update(
             LessonBlock,
             { id: item.id, chapterId },
-            { orderIndex: item.orderIndex },
+            { orderIndex: -(i + 1000) },
           );
           if (result.affected === 0) {
             throw new BadRequestException(
               `Block ${item.id} does not belong to chapter ${chapterId} or does not exist`,
             );
           }
+        }
+        for (const item of items) {
+          await transactionalEntityManager.update(
+            LessonBlock,
+            { id: item.id, chapterId },
+            { orderIndex: item.orderIndex },
+          );
         }
       },
     );
@@ -970,10 +1002,14 @@ export class CoursesService {
 
       await this.progressRepository.save(progress);
     }
-    
-    const finalProgress = await this.progressRepository.findOne({ where: { userId: user.id, courseId }});
+
+    const finalProgress = await this.progressRepository.findOne({
+      where: { userId: user.id, courseId },
+    });
     const totalChapters = await this.getCourseTotalChapters(courseId);
-    const courseCompleted = finalProgress ? finalProgress.completedLessonsCount === totalChapters : false;
+    const courseCompleted = finalProgress
+      ? finalProgress.completedLessonsCount === totalChapters
+      : false;
 
     return {
       completed: true,

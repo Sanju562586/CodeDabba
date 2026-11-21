@@ -57,7 +57,7 @@ export function StatsSection() {
     const isInView = useInView(ref, { once: true, margin: "-80px" });
 
     return (
-        <section className="py-24 relative overflow-hidden" ref={ref}>
+        <section className="py-8 md:py-24 relative overflow-hidden" ref={ref}>
             {/* subtle separator lines */}
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />

@@ -18,7 +18,7 @@ export function MentorApplicationSection() {
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-fuchsia-600/8 rounded-full blur-[120px]" />
 
             <div className="container mx-auto px-6 relative z-10">
-                <div className="grid lg:grid-cols-2 gap-16 items-center">
+                <div className="grid lg:grid-cols-2 gap-8 md:gap-16 items-center">
 
                     {/* Content Side */}
                     <motion.div

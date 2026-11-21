@@ -83,7 +83,7 @@ export default function StudentCoursesPage() {
                     transition={{ duration: 0.4 }}
                 >
                     {loading ? (
-                        <div className="flex justify-center py-24">
+                        <div className="flex justify-center py-8 md:py-24">
                             <Loader2 className="w-10 h-10 animate-spin text-violet-500" />
                         </div>
                     ) : (

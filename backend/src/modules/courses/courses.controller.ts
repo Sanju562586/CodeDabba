@@ -56,7 +56,7 @@ export class CoursesController {
   @Get(':id')
   @UseGuards(OptionalAuthGuard)
   async findOne(@Request() req: any, @Param('id') id: string) {
-    return await this.coursesService.findOne(id, req.user?.id);
+    return await this.coursesService.findOne(id, req.user?.id, req.user?.role);
   }
   @Post('upload-thumbnail')
   @UseGuards(AuthGuard, RolesGuard)
