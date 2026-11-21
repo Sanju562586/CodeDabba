@@ -48,6 +48,11 @@ import { HackathonScore } from '../../entities/hackathon-score.entity';
 import { HackathonLeaderboard } from '../../entities/hackathon-leaderboard.entity';
 import { User, Role } from '../../entities/user.entity';
 import {
+  HackathonPayment,
+  PaymentType,
+  PaymentStatus,
+} from '../../entities/hackathon-payment.entity';
+import {
   HackathonActivityLog,
   ActivityType,
   LogStatus,
@@ -97,7 +102,6 @@ export class HackathonsService {
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
-  @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
     const now = new Date();
 
@@ -125,7 +129,7 @@ export class HackathonsService {
       );
     }
 
-    // Close Registration 
+    // Close Registration
     const toCloseReg = await this.hackathonsRepository.find({
       where: {
         status: HackathonStatus.REGISTRATION_OPEN,
@@ -137,7 +141,7 @@ export class HackathonsService {
       if (h.mentorSelectionEnd && h.mentorSelectionEnd > now) {
         h.status = HackathonStatus.MENTOR_SELECTION;
         await this.hackathonsRepository.save(h);
-        await this.transitionToTeamsForming(h.id); 
+        await this.transitionToTeamsForming(h.id);
         await this.logActivity(
           h.id,
           ActivityType.STATUS_CHANGE,
@@ -147,7 +151,7 @@ export class HackathonsService {
       } else {
         h.status = HackathonStatus.APPROVAL_IN_PROGRESS;
         await this.hackathonsRepository.save(h);
-        await this.transitionToTeamsForming(h.id); 
+        await this.transitionToTeamsForming(h.id);
         await this.performMentorDistribution(h.id);
         await this.logActivity(
           h.id,
@@ -317,7 +321,10 @@ export class HackathonsService {
         phase,
       });
     } catch (error) {
-      this.logger.error(`Audit Log Fail: ${activityType} - ${description}`, error);
+      this.logger.error(
+        `Audit Log Fail: ${activityType} - ${description}`,
+        error,
+      );
     }
   }
 
@@ -659,6 +666,25 @@ export class HackathonsService {
       throw new ConflictException(
         'You have a pending invitation for this hackathon. Please accept or decline it first.',
       );
+
+    // Paid Hackathon Enforcement
+    if (hackathon.isPaid) {
+      const payment = await this.dataSource
+        .getRepository(HackathonPayment)
+        .findOne({
+          where: {
+            userId: user.id,
+            hackathonId,
+            paymentType: PaymentType.REGISTRATION,
+            status: PaymentStatus.SUCCESS,
+          },
+        });
+      if (!payment) {
+        throw new BadRequestException(
+          'A successful registration fee payment is required before registering for this hackathon.',
+        );
+      }
+    }
 
     // Individual registration
     if (registerDto.registrationType === RegistrationType.INDIVIDUAL) {
@@ -1325,8 +1351,13 @@ export class HackathonsService {
     if (!hackathon) throw new NotFoundException('Hackathon not found');
 
     const now = new Date();
-    if (hackathon.mentorSelectionStart && now < hackathon.mentorSelectionStart) {
-      throw new BadRequestException('Mentor selection phase has not started yet');
+    if (
+      hackathon.mentorSelectionStart &&
+      now < hackathon.mentorSelectionStart
+    ) {
+      throw new BadRequestException(
+        'Mentor selection phase has not started yet',
+      );
     }
     if (hackathon.mentorSelectionEnd && now > hackathon.mentorSelectionEnd) {
       throw new BadRequestException('Mentor selection phase has ended');
@@ -1365,7 +1396,11 @@ export class HackathonsService {
     }
 
     // Automatically trigger team distributions to newly added mentors if the hackathon has passed the registration close phase.
-    if (hackathon.status === HackathonStatus.APPROVAL_IN_PROGRESS || hackathon.status === HackathonStatus.MENTOR_SELECTION || (hackathon.registrationEnd && now > hackathon.registrationEnd)) {
+    if (
+      hackathon.status === HackathonStatus.APPROVAL_IN_PROGRESS ||
+      hackathon.status === HackathonStatus.MENTOR_SELECTION ||
+      (hackathon.registrationEnd && now > hackathon.registrationEnd)
+    ) {
       await this.performMentorDistribution(hackathonId);
     }
 
@@ -1487,7 +1522,9 @@ export class HackathonsService {
   }
 
   async getMentorTeams(mentorId: string, hackathonId: string) {
-    const hackathon = await this.hackathonsRepository.findOne({ where: { id: hackathonId } });
+    const hackathon = await this.hackathonsRepository.findOne({
+      where: { id: hackathonId },
+    });
     if (!hackathon) throw new NotFoundException('Hackathon not found');
 
     // Visibility is persistent and bypasses hackathon status restrictions.
@@ -1852,6 +1889,24 @@ export class HackathonsService {
       );
     }
 
+    if (round.isPaymentRequired) {
+      const payment = await this.dataSource
+        .getRepository(HackathonPayment)
+        .findOne({
+          where: {
+            teamId,
+            roundId,
+            paymentType: PaymentType.ROUND,
+            status: PaymentStatus.SUCCESS,
+          },
+        });
+      if (!payment) {
+        throw new BadRequestException(
+          'A successful payment is required before submitting for this round.',
+        );
+      }
+    }
+
     if (now > round.submissionEnd) {
       throw new BadRequestException(
         'Deadline has passed. External signal blocked.',
@@ -1985,7 +2040,9 @@ export class HackathonsService {
     const now = new Date();
 
     if (submission.hackathon.status !== HackathonStatus.ROUND_EVALUATION) {
-      throw new BadRequestException('Scores can only be submitted during the ROUND_EVALUATION phase');
+      throw new BadRequestException(
+        'Scores can only be submitted during the ROUND_EVALUATION phase',
+      );
     }
 
     if (
@@ -1994,7 +2051,9 @@ export class HackathonsService {
       now < submission.round.evaluationStart ||
       now > submission.round.evaluationEnd
     ) {
-      throw new BadRequestException('Current time is outside the strict evaluation window');
+      throw new BadRequestException(
+        'Current time is outside the strict evaluation window',
+      );
     }
 
     // New Tactical Mandate: Admins are Observers. Only assigned Mentors (Archons) can execute evaluations.
@@ -2060,12 +2119,12 @@ export class HackathonsService {
       ActivityType.EVALUATION_SUBMITTED,
       `Archon "${user.name}" finalized evaluation for Squad "${submission.team?.name}". Final Combat Score: ${score}/10`,
       user,
-      { 
-        submissionId, 
-        teamId: submission.teamId, 
-        score, 
+      {
+        submissionId,
+        teamId: submission.teamId,
+        score,
         feedbackLength: feedback.length,
-        roundNumber: submission.round?.roundNumber 
+        roundNumber: submission.round?.roundNumber,
       },
       LogStatus.SUCCESS,
       submission.roundId,
@@ -2076,7 +2135,7 @@ export class HackathonsService {
     const team = submission.team;
     const lead = await this.usersRepository.findOne({
       where: { id: team.leadId },
-    }); 
+    });
 
     if (lead) {
       try {
@@ -2101,7 +2160,6 @@ export class HackathonsService {
     }
 
     return submission;
-
   }
 
   async submitScore(
@@ -2635,7 +2693,10 @@ export class HackathonsService {
     });
 
     const approvedTeamsCount = await this.teamsRepository.count({
-      where: { hackathonId: id, status: In([TeamStatus.APPROVED, TeamStatus.WINNER]) },
+      where: {
+        hackathonId: id,
+        status: In([TeamStatus.APPROVED, TeamStatus.WINNER]),
+      },
     });
     const rejectedTeamsCount = await this.teamsRepository.count({
       where: { hackathonId: id, status: TeamStatus.REJECTED },
@@ -2842,7 +2903,7 @@ export class HackathonsService {
     );
 
     // 3. Fetch Evaluations across all missions
-    let evaluations = await this.scoresRepository.find({
+    const evaluations = await this.scoresRepository.find({
       where: { teamId },
       relations: ['mentor', 'round'],
     });
@@ -2932,7 +2993,10 @@ export class HackathonsService {
     return { message: 'Hackathon successfully deleted.' };
   }
 
-  async deleteTeamAdmin(hackathonId: string, teamId: string): Promise<{ message: string }> {
+  async deleteTeamAdmin(
+    hackathonId: string,
+    teamId: string,
+  ): Promise<{ message: string }> {
     const team = await this.teamsRepository.findOne({
       where: { id: teamId, hackathonId },
     });

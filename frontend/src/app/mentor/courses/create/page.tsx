@@ -93,7 +93,7 @@ export default function CreateCoursePage() {
 
     return (
         <div className="min-h-screen bg-black text-white">
-            <div className="container mx-auto px-6 py-24">
+            <div className="container mx-auto px-6 py-8 md:py-24">
                     <Link href="/mentor/courses" className="inline-flex items-center text-zinc-400 hover:text-white mb-8 transition-colors">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to HQ

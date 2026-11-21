@@ -27,7 +27,7 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.usersService.findByEmail(email, true);
     if (user && user.password && (await bcrypt.compare(pass, user.password))) {
       const { password, ...result } = user;
       return result;
@@ -38,8 +38,9 @@ export class AuthService {
   async login(user: any) {
     const tokens = await this.getTokens(user.id, user.email, user.role);
     await this.updateRefreshToken(user.id, tokens.refresh_token);
+    const { password, ...userWithoutPassword } = user;
     return {
-      user,
+      user: userWithoutPassword,
       ...tokens,
     };
   }
@@ -49,8 +50,9 @@ export class AuthService {
     await this.hackathonsService.syncInvitations(user.id, user.email);
     const tokens = await this.getTokens(user.id, user.email, user.role);
     await this.updateRefreshToken(user.id, tokens.refresh_token);
+    const { password, ...userWithoutPassword } = user;
     return {
-      user,
+      user: userWithoutPassword,
       ...tokens,
     };
   }
@@ -180,14 +182,22 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       // Return a successful response even if the user doesn't exist to prevent email enumeration
-      return { message: 'If an account exists with this email, an OTP has been sent.' };
+      return {
+        message: 'If an account exists with this email, an OTP has been sent.',
+      };
     }
     await this.otpService.generateAndSendOtp(email, OtpType.FORGOT_PASSWORD);
-    return { message: 'If an account exists with this email, an OTP has been sent.' };
+    return {
+      message: 'If an account exists with this email, an OTP has been sent.',
+    };
   }
 
   async resetPasswordWithOtp(email: string, otp: string, newPassword: string) {
-    const isValid = await this.otpService.verifyOtp(email, otp, OtpType.FORGOT_PASSWORD);
+    const isValid = await this.otpService.verifyOtp(
+      email,
+      otp,
+      OtpType.FORGOT_PASSWORD,
+    );
     if (!isValid) {
       throw new UnauthorizedException('Invalid or expired OTP');
     }

@@ -12,6 +12,7 @@ import { LessonBlock } from '../../entities/lesson-block.entity';
 import { CreateLessonBlockDto } from './dto/create-lesson-block.dto';
 import { CourseStatus, Course } from '../../entities/course.entity';
 import { Enrollment } from '../../entities/enrollment.entity';
+import { EnrollmentStatus } from '../../entities/student-profile.entity';
 import * as cloudinary from 'cloudinary';
 
 @Injectable()
@@ -289,6 +290,7 @@ export class ChaptersService {
   async getChapterContentForStudent(
     chapterId: string,
     userId?: string,
+    userRole?: string,
   ): Promise<Chapter> {
     const chapter = await this.chaptersRepository.findOne({
       where: { id: chapterId },
@@ -314,6 +316,11 @@ export class ChaptersService {
 
     const course = chapter.module.course;
 
+    // Check if user is the mentor of the course or admin
+    if (userId && (course.mentorId === userId || userRole === Role.ADMIN)) {
+      return chapter;
+    }
+
     // Lesson Access Logic
     if (course.accessType === 'free') {
       return chapter; // Always allow free courses
@@ -329,14 +336,9 @@ export class ChaptersService {
       );
     }
 
-    // Check if user is the mentor of the course
-    if (course.mentorId === userId) {
-      return chapter;
-    }
-
     // Check enrollment
     const isEnrolled = await this.dataSource.getRepository(Enrollment).findOne({
-      where: { courseId: course.id, userId, status: 'active' as any },
+      where: { courseId: course.id, userId, status: EnrollmentStatus.ACTIVE },
     });
 
     if (!isEnrolled) {

@@ -18,13 +18,13 @@ export function AuthLayout({ children, title, subtitle, robotFocusedField }: Aut
             <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 min-h-[600px]">
 
                 {/* Left Side — Visual Panel */}
-                <div className="hidden lg:flex relative bg-indigo-950 flex-col p-12 text-white overflow-hidden">
+                <div className="flex relative bg-indigo-950 flex-col p-6 lg:p-12 text-white overflow-hidden">
                     {/* Background photo overlay */}
                     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2671&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-overlay" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
                     {/* Logo */}
-                    <div className="relative z-10 shrink-0">
+                    <div className="relative z-10 shrink-0 hidden lg:block">
                         <Link href="/landing" className="flex items-center gap-2 w-fit">
                             <div className="p-1.5 rounded-lg bg-white/10 border border-white/20">
                                 <Code2 className="w-5 h-5 text-white" />
@@ -34,12 +34,12 @@ export function AuthLayout({ children, title, subtitle, robotFocusedField }: Aut
                     </div>
 
                     {/* Robot */}
-                    <div className="relative z-10 flex-1 flex items-center justify-center w-full min-h-[200px] my-4">
+                    <div className="relative z-10 flex-1 flex items-center justify-center w-full min-h-[160px] lg:min-h-[200px] my-2 lg:my-4">
                         <ResponsiveRobot focusedField={robotFocusedField ?? null} />
                     </div>
 
                     {/* Quote */}
-                    <div className="relative z-10 max-w-lg space-y-3 shrink-0">
+                    <div className="relative z-10 max-w-lg space-y-3 shrink-0 hidden lg:block">
                         <blockquote className="text-3xl font-bold tracking-tight text-white leading-snug">
                             "Discipline is the bridge between goals and accomplishment."
                         </blockquote>

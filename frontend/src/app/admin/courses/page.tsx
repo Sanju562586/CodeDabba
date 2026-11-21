@@ -41,7 +41,7 @@ function AdminCoursesContent() {
 
     return (
         <div className="w-full">
-            <div className="container mx-auto px-6 py-24">
+            <div className="container mx-auto px-6 py-8 md:py-24">
                 <div className="mb-12">
                     <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-pink-400">
                         All Courses
@@ -50,11 +50,11 @@ function AdminCoursesContent() {
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center py-24">
+                    <div className="flex justify-center py-8 md:py-24">
                         <Loader2 className="w-12 h-12 animate-spin text-violet-500" />
                     </div>
                 ) : courses.length === 0 ? (
-                    <div className="text-center py-24 bg-zinc-900/50 border border-zinc-800 rounded-2xl">
+                    <div className="text-center py-8 md:py-24 bg-zinc-900/50 border border-zinc-800 rounded-2xl">
                         <BookOpen className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
                         <h3 className="text-xl font-bold text-white mb-2">No courses found</h3>
                         <p className="text-zinc-400">There are currently no courses on the platform.</p>

@@ -93,6 +93,7 @@ export class MentorApplicationsService {
 
     // Check if user exists (maybe they were a student?)
     let user = await this.usersService.findByEmail(application.email);
+    const isNewUser = !user;
 
     if (user) {
       // If user exists, upgrade role to MENTOR
@@ -138,6 +139,8 @@ export class MentorApplicationsService {
     const savedApplication =
       await this.mentorApplicationRepository.save(application);
 
+    const appUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
     // Send approval email to mentor
     await this.sendEmail(
       savedApplication.email,
@@ -148,9 +151,9 @@ export class MentorApplicationsService {
                     <p>Dear ${savedApplication.name},</p>
                     <p>We are thrilled to inform you that your application to become a mentor at CodeDabba has been approved!</p>
                     <p>You can now log in to your dashboard using your credentials.</p>
-                    ${!user ? `<p><strong>Temporary Password:</strong> ${tempPassword}</p>` : ''}
+                    ${isNewUser ? `<p><strong>Temporary Password:</strong> ${tempPassword}</p>` : ''}
                     <p>Please log in and update your profile.</p>
-                    <a href="http://localhost:3000/login" style="background-color: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login to Dashboard</a>
+                    <a href="${appUrl}/login" style="background-color: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login to Dashboard</a>
                 </div>
             `,
     );

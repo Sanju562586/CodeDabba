@@ -31,7 +31,7 @@ export class User {
   @Column({ type: 'varchar', unique: true, nullable: true })
   googleId: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', nullable: true, select: false })
   password: string | null;
 
   @Column({

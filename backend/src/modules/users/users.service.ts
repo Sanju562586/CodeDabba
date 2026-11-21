@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -26,7 +30,17 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(
+    email: string,
+    includePassword = false,
+  ): Promise<User | null> {
+    if (includePassword) {
+      return this.usersRepository
+        .createQueryBuilder('user')
+        .addSelect('user.password')
+        .where('user.email = :email', { email })
+        .getOne();
+    }
     return this.usersRepository.findOne({ where: { email } });
   }
 
@@ -77,7 +91,7 @@ export class UsersService {
   async findAll(): Promise<User[]> {
     return this.usersRepository.find({
       order: { createdAt: 'DESC' },
-      select: ['id', 'email', 'name', 'role', 'mobileNumber', 'createdAt'] // exclude password
+      select: ['id', 'email', 'name', 'role', 'mobileNumber', 'createdAt'], // exclude password
     });
   }
 
@@ -88,9 +102,22 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    // Attempting a direct hard delete. With correct cascade settings, related data should be removed.
-    // However, if there are orphaned foreign keys, this may fail and require manual cleanup in a real scenario.
-    await this.usersRepository.remove(user);
+    await this.usersRepository.manager.transaction(async (manager) => {
+      await manager.delete('refresh_token', { userId: id });
+      await manager.delete('student_profile', { userId: id });
+      await manager.delete('mentor_profile', { userId: id });
+      await manager.delete('enrollment', { userId: id });
+      await manager.delete('progress', { userId: id });
+      await manager.delete('otp', { email: user.email });
+      await manager.delete('hackathon_team_member', { studentId: id });
+      await manager.delete('hackathon_team_invitation', {
+        invitedEmail: user.email,
+      });
+      await manager.delete('hackathon_registration', { studentId: id });
+      await manager.delete('hackathon_payments', { userId: id });
+      await manager.delete('certificate', { userId: id });
+      await manager.remove(user);
+    });
 
     return { message: 'User successfully deleted.' };
   }

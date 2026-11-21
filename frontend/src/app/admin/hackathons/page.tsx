@@ -7,7 +7,7 @@ import Link from "next/link";
 export default function AdminHackathonsPage() {
     return (
         <div className="min-h-screen bg-black text-white">
-            <div className="container mx-auto px-6 py-24">
+            <div className="container mx-auto px-6 py-8 md:py-24">
                 <div className="flex items-center gap-6 mb-12">
                     <Link href="/admin/dashboard" className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-all">
                         <ArrowLeft className="w-6 h-6" />

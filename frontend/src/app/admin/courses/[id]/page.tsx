@@ -77,6 +77,50 @@ function AdminCourseDetailsContent() {
         }
     };
 
+    const handleApproveCurriculum = async () => {
+        try {
+            await api.post(`/courses/${courseId}/approve-curriculum`);
+            toast.success("Curriculum approved!");
+            fetchDetails();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to approve curriculum");
+        }
+    };
+
+    const handleRejectCurriculum = async () => {
+        const feedback = prompt("Enter rejection feedback for mentor:");
+        if (!feedback) return;
+        try {
+            await api.post(`/courses/${courseId}/reject-curriculum`, { feedback });
+            toast.success("Curriculum rejected with feedback");
+            fetchDetails();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to reject curriculum");
+        }
+    };
+
+    const handleApproveContent = async () => {
+        try {
+            await api.post(`/courses/${courseId}/approve-content`);
+            toast.success("Content approved and course published!");
+            fetchDetails();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to approve content");
+        }
+    };
+
+    const handleRejectContent = async () => {
+        const feedback = prompt("Enter rejection feedback for mentor:");
+        if (!feedback) return;
+        try {
+            await api.post(`/courses/${courseId}/reject-content`, { feedback });
+            toast.success("Content rejected with feedback");
+            fetchDetails();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to reject content");
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen bg-black">
@@ -136,6 +180,38 @@ function AdminCourseDetailsContent() {
                         <p><strong className="text-zinc-500">Status:</strong> {details.course.status.replace(/_/g, ' ')}</p>
                         <p><strong className="text-zinc-500">Total Enrolled:</strong> {details.students.length}</p>
                     </div>
+                    {details.course.status === 'curriculum_under_review' && (
+                        <div className="mt-4 pt-4 border-t border-zinc-800 flex gap-3">
+                            <button
+                                onClick={handleApproveCurriculum}
+                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                            >
+                                Approve Curriculum
+                            </button>
+                            <button
+                                onClick={handleRejectCurriculum}
+                                className="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                                Reject Curriculum
+                            </button>
+                        </div>
+                    )}
+                    {details.course.status === 'content_under_review' && (
+                        <div className="mt-4 pt-4 border-t border-zinc-800 flex gap-3">
+                            <button
+                                onClick={handleApproveContent}
+                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                            >
+                                Approve Content & Publish
+                            </button>
+                            <button
+                                onClick={handleRejectContent}
+                                className="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                                Reject Content
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 

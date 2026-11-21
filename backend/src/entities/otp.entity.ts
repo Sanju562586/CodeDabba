@@ -34,6 +34,9 @@ export class Otp {
   @Column({ default: false })
   isUsed: boolean;
 
+  @Column({ default: 0 })
+  attempts: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

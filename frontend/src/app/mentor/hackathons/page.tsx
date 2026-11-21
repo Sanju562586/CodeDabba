@@ -36,7 +36,7 @@ export default function MentorHackathonsPage() {
 
     return (
         <div className="w-full">
-            <div className="container mx-auto px-6 py-24">
+            <div className="container mx-auto px-6 py-8 md:py-24">
                 <div className="flex items-center justify-between mb-12">
                     <div>
                         <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-400 flex items-center gap-4">
@@ -51,7 +51,7 @@ export default function MentorHackathonsPage() {
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center py-24">
+                    <div className="flex justify-center py-8 md:py-24">
                         <Clock className="w-12 h-12 animate-pulse text-emerald-500" />
                     </div>
                 ) : hackathons.length === 0 ? (

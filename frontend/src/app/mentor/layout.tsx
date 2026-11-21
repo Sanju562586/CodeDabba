@@ -10,7 +10,7 @@ export default function MentorLayout({
 }) {
     return (
         <ProtectedRoute allowedRoles={['MENTOR']}>
-            <div className="pl-20 min-h-screen bg-black text-white">
+            <div className="md:pl-20 pt-16 md:pt-0 min-h-screen bg-black text-white">
                 <DashboardSidebar />
                 {children}
             </div>

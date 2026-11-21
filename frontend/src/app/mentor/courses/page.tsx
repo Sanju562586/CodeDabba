@@ -60,7 +60,7 @@ export default function MentorCoursesPage() {
 
     return (
         <div className="min-h-screen bg-black text-white">
-            <div className="container mx-auto px-6 py-24">
+            <div className="container mx-auto px-6 py-8 md:py-24">
                 <div className="flex justify-between items-center mb-12">
                     <div>
                         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-pink-400 mb-2">My Courses</h1>
@@ -80,7 +80,7 @@ export default function MentorCoursesPage() {
                         <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
                     </div>
                 ) : courses.length === 0 ? (
-                    <div className="text-center py-24 bg-zinc-900/30 border border-zinc-800 rounded-3xl border-dashed">
+                    <div className="text-center py-8 md:py-24 bg-zinc-900/30 border border-zinc-800 rounded-3xl border-dashed">
                         <BookOpen className="w-16 h-16 text-zinc-700 mx-auto mb-6" />
                         <h3 className="text-xl font-bold text-white mb-2">No courses yet</h3>
                         <p className="text-zinc-400 mb-8 max-w-md mx-auto">Start sharing your knowledge by creating your first course.</p>

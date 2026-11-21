@@ -68,23 +68,40 @@ export class OtpService {
     otpCode: string,
     type: OtpType,
   ): Promise<boolean> {
-    const otpRecord = await this.otpRepository.findOne({
+    const activeOtp = await this.otpRepository.findOne({
       where: {
         email,
-        otp: otpCode,
         type,
         isUsed: false,
         expiry: MoreThan(new Date()),
       },
+      order: { createdAt: 'DESC' },
     });
 
-    if (!otpRecord) {
+    if (!activeOtp) {
       throw new BadRequestException('Invalid or expired OTP');
     }
 
+    if (activeOtp.attempts >= 5) {
+      activeOtp.isUsed = true;
+      await this.otpRepository.save(activeOtp);
+      throw new BadRequestException(
+        'Too many failed attempts. Please request a new OTP.',
+      );
+    }
+
+    if (activeOtp.otp !== otpCode) {
+      activeOtp.attempts += 1;
+      if (activeOtp.attempts >= 5) {
+        activeOtp.isUsed = true;
+      }
+      await this.otpRepository.save(activeOtp);
+      throw new BadRequestException('Invalid OTP');
+    }
+
     // Mark OTP as used
-    otpRecord.isUsed = true;
-    await this.otpRepository.save(otpRecord);
+    activeOtp.isUsed = true;
+    await this.otpRepository.save(activeOtp);
 
     return true;
   }

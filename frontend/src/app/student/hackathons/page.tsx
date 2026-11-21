@@ -77,7 +77,7 @@ export default function StudentHackathonsPage() {
                     transition={{ duration: 0.4 }}
                 >
                     {loading ? (
-                        <div className="flex justify-center py-24">
+                        <div className="flex justify-center py-8 md:py-24">
                             <Loader2 className="w-8 h-8 animate-spin text-fuchsia-500" />
                         </div>
                     ) : myHackathons.length > 0 ? (

@@ -10,7 +10,9 @@ import {
     Code2,
     Users,
     ChevronRight,
-    ClipboardList
+    ClipboardList,
+    Menu,
+    X
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import { useState, useEffect } from "react";
@@ -21,6 +23,12 @@ export function DashboardSidebar() {
     const { user, logout } = useAuth();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // Close mobile menu when route changes
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [pathname]);
 
     useEffect(() => {
         document.body.classList.add('dashboard-active');
@@ -57,21 +65,56 @@ export function DashboardSidebar() {
     return (
         <>
             {isLoggingOut && <FullScreenLoader message="Signing out..." />}
+
+            {/* Mobile Top Bar */}
+            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-xl border-b border-white/5 z-40 flex items-center justify-between px-4">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-violet-600/10 border border-violet-500/20">
+                        <Code2 className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <span className="font-bold text-white tracking-tight">CodeDabba</span>
+                </div>
+                <button 
+                    onClick={() => setIsMobileMenuOpen(true)}
+                    className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
+            </div>
+
+            {/* Mobile Overlay */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             <aside
-                className="fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-black/60 backdrop-blur-2xl border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.3)] transition-all duration-300 overflow-hidden"
-                style={{ width: isExpanded ? '16rem' : '5rem' }}
+                className={`fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-black/90 md:bg-black/60 backdrop-blur-2xl border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.3)] transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}`}
+                style={{ width: isMobileMenuOpen ? '16rem' : (isExpanded ? '16rem' : '5rem') }}
                 onMouseEnter={() => setIsExpanded(true)}
                 onMouseLeave={() => setIsExpanded(false)}
             >
-                {/* Logo */}
-                <div className="flex items-center h-20 px-5 shrink-0 border-b border-white/5">
-                    <div className="p-2 rounded-lg bg-violet-600/10 border border-violet-500/20 shrink-0">
-                        <Code2 className="w-5 h-5 text-violet-400" />
+                {/* Logo Area */}
+                <div className="flex items-center justify-between h-20 px-5 shrink-0 border-b border-white/5">
+                    <div className="flex items-center">
+                        <div className="p-2 rounded-lg bg-violet-600/10 border border-violet-500/20 shrink-0">
+                            <Code2 className="w-5 h-5 text-violet-400" />
+                        </div>
+                        <div className="ml-3 overflow-hidden whitespace-nowrap" style={{ opacity: isExpanded || isMobileMenuOpen ? 1 : 0, transition: 'opacity 0.2s' }}>
+                            <span className="font-bold text-white text-base">CodeDabba</span>
+                            <span className="block text-xs text-zinc-500">{roleLabel} Portal</span>
+                        </div>
                     </div>
-                    <div className="ml-3 overflow-hidden whitespace-nowrap" style={{ opacity: isExpanded ? 1 : 0, transition: 'opacity 0.2s' }}>
-                        <span className="font-bold text-white text-base">CodeDabba</span>
-                        <span className="block text-xs text-zinc-500">{roleLabel} Portal</span>
-                    </div>
+                    {isMobileMenuOpen && (
+                        <button 
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="md:hidden p-2 rounded-lg text-zinc-400 hover:text-white transition-colors ml-2 shrink-0"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Navigation */}
@@ -84,7 +127,7 @@ export function DashboardSidebar() {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                title={!isExpanded ? item.label : undefined}
+                                title={(!isExpanded && !isMobileMenuOpen) ? item.label : undefined}
                                 className={`flex items-center h-12 px-3 rounded-xl transition-all duration-300 shrink-0 group/item relative overflow-hidden ${
                                     isActive
                                     ? "text-white bg-white/5 border border-white/10 shadow-[inset_0_0_20px_rgba(139,92,246,0.15)]"
@@ -97,11 +140,11 @@ export function DashboardSidebar() {
                                 <Icon className={`w-5 h-5 shrink-0 transition-transform duration-300 ${isActive ? 'text-fuchsia-400' : 'group-hover/item:scale-110'}`} />
                                 <span
                                     className="ml-3 font-medium whitespace-nowrap text-sm overflow-hidden"
-                                    style={{ opacity: isExpanded ? 1 : 0, transition: 'opacity 0.15s', maxWidth: isExpanded ? '160px' : '0' }}
+                                    style={{ opacity: isExpanded || isMobileMenuOpen ? 1 : 0, transition: 'opacity 0.15s', maxWidth: isExpanded || isMobileMenuOpen ? '160px' : '0' }}
                                 >
                                     {item.label}
                                 </span>
-                                {isActive && isExpanded && (
+                                {isActive && (isExpanded || isMobileMenuOpen) && (
                                     <ChevronRight className="w-4 h-4 ml-auto text-fuchsia-400" />
                                 )}
                             </Link>
@@ -118,7 +161,7 @@ export function DashboardSidebar() {
                         </div>
                         <div
                             className="overflow-hidden whitespace-nowrap"
-                            style={{ opacity: isExpanded ? 1 : 0, transition: 'opacity 0.15s' }}
+                            style={{ opacity: isExpanded || isMobileMenuOpen ? 1 : 0, transition: 'opacity 0.15s' }}
                         >
                             <p className="text-xs font-semibold text-white truncate max-w-[120px]">{user?.name}</p>
                             <p className="text-xs text-zinc-500 truncate max-w-[120px]">{user?.email}</p>
@@ -129,13 +172,13 @@ export function DashboardSidebar() {
                     <button
                         onClick={handleLogout}
                         disabled={isLoggingOut}
-                        title={!isExpanded ? "Sign Out" : undefined}
+                        title={(!isExpanded && !isMobileMenuOpen) ? "Sign Out" : undefined}
                         className="flex items-center w-full h-11 px-3 rounded-xl text-zinc-500 hover:text-red-400 hover:bg-red-500/8 border border-transparent transition-all"
                     >
                         <LogOut className="w-5 h-5 shrink-0" />
                         <span
                             className="ml-3 font-medium whitespace-nowrap text-sm"
-                            style={{ opacity: isExpanded ? 1 : 0, transition: 'opacity 0.15s' }}
+                            style={{ opacity: isExpanded || isMobileMenuOpen ? 1 : 0, transition: 'opacity 0.15s' }}
                         >
                             Sign Out
                         </span>

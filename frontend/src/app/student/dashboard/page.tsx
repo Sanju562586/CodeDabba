@@ -67,7 +67,7 @@ export default function StudentDashboard() {
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-violet-600/20 rounded-full blur-[120px] mix-blend-screen pointer-events-none" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fuchsia-600/10 rounded-full blur-[120px] mix-blend-screen pointer-events-none" />
             
-            <div className="container mx-auto px-6 py-24 relative z-10">
+            <div className="container mx-auto px-6 py-8 md:py-24 relative z-10">
 
                 {/* Hero Header */}
                 <motion.div
@@ -117,7 +117,7 @@ export default function StudentDashboard() {
 
                 {/* Stats Grid */}
                 {loading ? (
-                    <div className="flex justify-center py-24">
+                    <div className="flex justify-center py-8 md:py-24">
                         <Loader2 className="w-12 h-12 animate-spin text-violet-500" />
                     </div>
                 ) : (

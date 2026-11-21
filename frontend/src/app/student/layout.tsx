@@ -10,7 +10,7 @@ export default function StudentLayout({
 }) {
     return (
         <ProtectedRoute allowedRoles={['STUDENT']}>
-            <div className="pl-20 min-h-screen bg-black text-white">
+            <div className="md:pl-20 pt-16 md:pt-0 min-h-screen bg-black text-white">
                 <DashboardSidebar />
                 {children}
             </div>
