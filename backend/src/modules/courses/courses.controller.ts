@@ -9,6 +9,7 @@ import {
   Query,
   Patch,
   Delete,
+  Res,
 } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateModuleDto } from './dto/create-module.dto';
@@ -28,7 +29,17 @@ export class CoursesController {
 
   @Get()
   @UseGuards(OptionalAuthGuard)
-  async findAll(@Request() req: any, @Query() query: any) {
+  async findAll(
+    @Request() req: any,
+    @Query() query: any,
+    @Res({ passthrough: true }) res: any,
+  ) {
+    if (!req.user?.id) {
+      res.setHeader(
+        'Cache-Control',
+        'public, max-age=30, s-maxage=60, stale-while-revalidate=120',
+      );
+    }
     return await this.coursesService.findAll(query, req.user?.id);
   }
 
@@ -55,7 +66,17 @@ export class CoursesController {
 
   @Get(':id')
   @UseGuards(OptionalAuthGuard)
-  async findOne(@Request() req: any, @Param('id') id: string) {
+  async findOne(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: any,
+  ) {
+    if (!req.user?.id) {
+      res.setHeader(
+        'Cache-Control',
+        'public, max-age=30, s-maxage=60, stale-while-revalidate=120',
+      );
+    }
     return await this.coursesService.findOne(id, req.user?.id, req.user?.role);
   }
   @Post('upload-thumbnail')
