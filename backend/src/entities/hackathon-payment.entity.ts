@@ -110,6 +110,15 @@ export class HackathonPayment {
   @Column({ nullable: true })
   receiptUrl: string;
 
+  @Column({ nullable: true, default: 'RAZORPAY' })
+  paymentMethod?: string;
+
+  @Column({ nullable: true })
+  proofUrl?: string;
+
+  @Column({ nullable: true })
+  adminNote?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

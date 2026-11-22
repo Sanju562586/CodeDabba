@@ -6,7 +6,7 @@ import { NavBar } from "@/components/landing/NavBar";
 import { useAuth } from "@/context/AuthProvider";
 import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
 import api from "@/lib/axios";
-import { Loader2, BookOpen, CheckCircle, Lock, PlayCircle, FileText, Code } from "lucide-react";
+import { Loader2, BookOpen, CheckCircle, Lock, PlayCircle, FileText, Code, Upload, X, CreditCard } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "react-hot-toast";
@@ -35,6 +35,12 @@ export default function CourseDetailPage() {
     const [loading, setLoading] = useState(true);
     const [enrolling, setEnrolling] = useState(false);
     const [paymentId, setPaymentId] = useState<string | null>(null);
+    const [showEnrollModal, setShowEnrollModal] = useState(false);
+    const [enrollMethod, setEnrollMethod] = useState<'razorpay' | 'manual'>('razorpay');
+    const [manualProofFile, setManualProofFile] = useState<File | null>(null);
+    const [manualTxnId, setManualTxnId] = useState("");
+    const [manualNotes, setManualNotes] = useState("");
+    const [submittingProof, setSubmittingProof] = useState(false);
 
     const { handlePayment } = useRazorpayPayment(() => {
         toast.success("Payment completed! You are now enrolled.");
@@ -63,29 +69,18 @@ export default function CourseDetailPage() {
             router.push('/login');
             return;
         }
+
+        if (course.accessType === 'paid') {
+            setShowEnrollModal(true);
+            return;
+        }
+
         setEnrolling(true);
         try {
-            if (course.accessType === 'paid') {
-                // Create payment for paid course
-                const { data: paymentRes } = await api.post('/payments/course', { courseId: course.id });
-                if (paymentRes.status === 'success') {
-                    setPaymentId(paymentRes.payment.id);
-                    // Start Razorpay payment
-                    await handlePayment(
-                        paymentRes.payment.id,
-                        course.title,
-                        user.name || user.email,
-                        user.email
-                    );
-                } else {
-                    toast.error("Failed to create payment");
-                }
-            } else {
-                // Free course - enroll directly
-                await api.post(`/courses/${course.id}/enroll`);
-                toast.success("Enrolled successfully!");
-                fetchCourse();
-            }
+            // Free course - enroll directly
+            await api.post(`/courses/${course.id}/enroll`);
+            toast.success("Enrolled successfully!");
+            fetchCourse();
         } catch (error: any) {
             console.error("Enrollment failed", error);
             if (error.response?.status === 401) {
@@ -96,6 +91,70 @@ export default function CourseDetailPage() {
             }
         } finally {
             setEnrolling(false);
+        }
+    };
+
+    const handleRazorpayPay = async () => {
+        if (!course || !user) return;
+        setEnrolling(true);
+        try {
+            const { data: paymentRes } = await api.post('/payments/course', { courseId: course.id });
+            if (paymentRes.status === 'success') {
+                setPaymentId(paymentRes.payment.id);
+                setShowEnrollModal(false);
+                await handlePayment(
+                    paymentRes.payment.id,
+                    course.title,
+                    user.name || user.email,
+                    user.email
+                );
+            } else {
+                toast.error("Failed to create payment");
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Payment initiation failed");
+        } finally {
+            setEnrolling(false);
+        }
+    };
+
+    const handleManualProofSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!course) return;
+
+        if (!manualProofFile) {
+            toast.error("Please attach a screenshot of your payment transfer");
+            return;
+        }
+
+        setSubmittingProof(true);
+        try {
+            // 1. Upload proof file
+            const formData = new FormData();
+            formData.append('file', manualProofFile);
+
+            const { data: fileData } = await api.post('/files/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            // 2. Submit manual payment proof
+            await api.post('/payments/course/manual-proof', {
+                courseId: course.id,
+                proofUrl: fileData.url,
+                transactionId: manualTxnId || undefined,
+                notes: manualNotes || undefined,
+            });
+
+            toast.success("Payment proof submitted! Admin will verify and activate your course.");
+            setShowEnrollModal(false);
+            setManualProofFile(null);
+            setManualTxnId("");
+            setManualNotes("");
+        } catch (error: any) {
+            console.error("Proof submission failed", error);
+            toast.error(error.response?.data?.message || "Failed to submit payment proof");
+        } finally {
+            setSubmittingProof(false);
         }
     };
 
@@ -239,6 +298,140 @@ export default function CourseDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Paid Enrollment Choice Modal (Razorpay vs Manual Zero-Gateway) */}
+            {showEnrollModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Enroll in Course</h2>
+                                <p className="text-xs text-zinc-400 mt-1">{course.title} • ₹{course.price}</p>
+                            </div>
+                            <button
+                                onClick={() => setShowEnrollModal(false)}
+                                className="p-2 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Method Tabs */}
+                        <div className="flex border-b border-zinc-800 bg-zinc-900/30">
+                            <button
+                                type="button"
+                                onClick={() => setEnrollMethod('razorpay')}
+                                className={`flex-1 py-3 text-sm font-semibold transition-all border-b-2 flex items-center justify-center gap-2 ${
+                                    enrollMethod === 'razorpay'
+                                        ? 'border-violet-500 text-violet-400 bg-violet-500/5'
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                <CreditCard className="w-4 h-4" />
+                                Instant (Razorpay)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setEnrollMethod('manual')}
+                                className={`flex-1 py-3 text-sm font-semibold transition-all border-b-2 flex items-center justify-center gap-2 ${
+                                    enrollMethod === 'manual'
+                                        ? 'border-violet-500 text-violet-400 bg-violet-500/5'
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                <Upload className="w-4 h-4" />
+                                Manual Slip / UPI
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto">
+                            {enrollMethod === 'razorpay' ? (
+                                <div className="space-y-6 text-center py-4">
+                                    <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-2xl text-left">
+                                        <p className="text-xs text-zinc-400 font-medium">Instant Activation</p>
+                                        <p className="text-sm text-zinc-200 mt-1">
+                                            Pay securely using UPI, Credit/Debit Cards, or Netbanking. Your course will unlock immediately.
+                                        </p>
+                                    </div>
+                                    <div className="text-3xl font-black text-white">
+                                        ₹{course.price}
+                                    </div>
+                                    <button
+                                        onClick={handleRazorpayPay}
+                                        disabled={enrolling}
+                                        className="w-full py-4 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-violet-900/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {enrolling ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
+                                        Proceed to Pay via Razorpay
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleManualProofSubmit} className="space-y-4">
+                                    <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2 text-xs text-zinc-300">
+                                        <p className="font-bold text-white flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                            Zero Gateway Transfer:
+                                        </p>
+                                        <p>1. Transfer <strong className="text-white">₹{course.price}</strong> to UPI ID: <code className="bg-black px-1.5 py-0.5 rounded text-violet-400">codedabba@upi</code></p>
+                                        <p>2. Upload your transfer screenshot below and submit.</p>
+                                        <p>3. Admin will review and unlock enrollment within a few hours.</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5">
+                                            Payment Screenshot / Receipt *
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*,application/pdf"
+                                            required
+                                            onChange={(e) => setManualProofFile(e.target.files?.[0] || null)}
+                                            className="w-full text-xs text-zinc-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 bg-zinc-950 p-2 border border-zinc-800 rounded-xl cursor-pointer"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5">
+                                            UPI Ref / Transaction ID
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={manualTxnId}
+                                            onChange={(e) => setManualTxnId(e.target.value)}
+                                            placeholder="e.g. UPI-1234567890"
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5">
+                                            Note (Optional)
+                                        </label>
+                                        <textarea
+                                            value={manualNotes}
+                                            onChange={(e) => setManualNotes(e.target.value)}
+                                            placeholder="Any note for the administrator..."
+                                            rows={2}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 resize-none"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={submittingProof || !manualProofFile}
+                                        className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {submittingProof ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                                        Submit Payment Proof for Approval
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

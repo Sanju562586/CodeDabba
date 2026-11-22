@@ -36,6 +36,7 @@ import { HackathonScore } from './entities/hackathon-score.entity';
 import { HackathonLeaderboard } from './entities/hackathon-leaderboard.entity';
 import { HackathonActivityLog } from './entities/hackathon-activity-log.entity';
 import { HackathonPayment } from './entities/hackathon-payment.entity';
+import { Notification } from './entities/notification.entity';
 
 // Feature Modules
 import { AuthModule } from './auth/auth.module';
@@ -48,6 +49,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { HackathonsModule } from './modules/hackathons/hackathons.module';
 import { CertificatesModule } from './modules/certificates/certificates.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FilesModule } from './modules/files/files.module';
 
 const logger = new Logger('AppModule');
@@ -133,6 +135,7 @@ const logger = new Logger('AppModule');
             HackathonLeaderboard,
             HackathonActivityLog,
             HackathonPayment,
+            Notification,
           ],
           synchronize: true, // Dev only — use migrations in production
           ssl: requireSsl ? { rejectUnauthorized: false } : false,
@@ -152,6 +155,7 @@ const logger = new Logger('AppModule');
     HackathonsModule,
     CertificatesModule,
     PaymentsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

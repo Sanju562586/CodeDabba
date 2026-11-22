@@ -29,6 +29,8 @@ import { LessonBlock } from '../../entities/lesson-block.entity';
 import { CreateBlockDto } from './dto/create-block.dto';
 import { Progress } from '../../entities/progress.entity';
 import { CertificatesService } from '../certificates/certificates.service';
+import { Task } from '../../entities/task.entity';
+import { Submission, SubmissionStatus } from '../../entities/submission.entity';
 
 @Injectable()
 export class CoursesService {
@@ -932,6 +934,31 @@ export class CoursesService {
     if (!chapter) throw new NotFoundException('Chapter not found');
     if (chapter.module.courseId !== courseId)
       throw new BadRequestException('Chapter does not belong to this course');
+
+    // Strict Progression Gate:
+    // If chapter contains tasks, verify that student has PASSED all tasks
+    const taskRepo = this.dataSource.getRepository(Task);
+    const submissionRepo = this.dataSource.getRepository(Submission);
+
+    const tasks = await taskRepo.find({ where: { chapterId } });
+    if (tasks.length > 0) {
+      const passedSubmissions = await submissionRepo.find({
+        where: {
+          userId: user.id,
+          chapterId,
+          status: SubmissionStatus.PASSED,
+        },
+      });
+
+      const passedTaskIds = new Set(passedSubmissions.map((s) => s.taskId));
+      const uncompletedTasks = tasks.filter((t) => !passedTaskIds.has(t.id));
+
+      if (uncompletedTasks.length > 0) {
+        throw new BadRequestException(
+          `Cannot unlock the next chapter. You have ${uncompletedTasks.length} incomplete task(s) in this chapter. Pass all tasks to continue.`,
+        );
+      }
+    }
 
     // Find or create progress
     let progress = await this.progressRepository.findOne({
