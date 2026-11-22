@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthProvider";
 import { useState, useEffect } from "react";
-import { Loader2, Users as UsersIcon, ArrowRight, Award, BookOpen, Trophy, Sparkles } from "lucide-react";
+import { Loader2, Users as UsersIcon, ArrowRight, Award, BookOpen, Trophy, Sparkles, Video, Calendar, Clock, ExternalLink } from "lucide-react";
 import api from "@/lib/axios";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -11,21 +11,24 @@ export default function StudentDashboard() {
     const { user } = useAuth();
     const [certificates, setCertificates] = useState<any[]>([]);
     const [invitationCount, setInvitationCount] = useState(0);
+    const [upcomingSessions, setUpcomingSessions] = useState<any[]>([]);
     const [stats, setStats] = useState({ courses: 0, hackathons: 0, certificates: 0 });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchAllData = async () => {
             try {
-                const [invRes, certRes, courseRes, hackRes] = await Promise.all([
+                const [invRes, certRes, courseRes, hackRes, sessionsRes] = await Promise.all([
                     api.get('/hackathons/mine/invitations'),
                     api.get('/certificates/my'),
                     api.get('/courses/enrolled'),
-                    api.get('/hackathons/mine/registrations')
+                    api.get('/hackathons/mine/registrations'),
+                    api.get('/doubt-sessions/my-upcoming').catch(() => ({ data: [] }))
                 ]);
                 
                 setInvitationCount(invRes.data.length);
                 setCertificates(certRes.data);
+                setUpcomingSessions(sessionsRes.data || []);
                 
                 setStats({
                     courses: courseRes.data.length,
@@ -174,6 +177,76 @@ export default function StudentDashboard() {
                                 </div>
                             </div>
                         </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Upcoming Doubt / Mentorship Sessions */}
+                {!loading && upcomingSessions.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-14"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                                <Video className="w-6 h-6 text-indigo-400" />
+                                Upcoming Live Mentorship Sessions
+                            </h2>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                            {upcomingSessions.map((session: any) => {
+                                const sessionDate = new Date(session.scheduledAt);
+                                return (
+                                    <div
+                                        key={session.id}
+                                        className="p-6 bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 hover:border-indigo-500/50 rounded-3xl transition-all flex flex-col justify-between gap-4"
+                                    >
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                                    session.status === 'LIVE'
+                                                        ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
+                                                        : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                                }`}>
+                                                    {session.status}
+                                                </span>
+                                                <span className="text-xs text-zinc-500">{session.course?.title}</span>
+                                            </div>
+
+                                            <h3 className="text-lg font-bold text-white">{session.title}</h3>
+                                            {session.description && (
+                                                <p className="text-xs text-zinc-400 line-clamp-2">{session.description}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="pt-4 border-t border-zinc-800/80 flex items-center justify-between">
+                                            <div className="text-xs text-zinc-400 space-y-1">
+                                                <p className="flex items-center gap-1.5">
+                                                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                                                    {sessionDate.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                </p>
+                                                <p className="flex items-center gap-1.5">
+                                                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                                                    {sessionDate.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' })} ({session.durationMinutes}m)
+                                                </p>
+                                            </div>
+
+                                            <a
+                                                href={session.meetingUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-indigo-600/20"
+                                            >
+                                                <Video className="w-3.5 h-3.5" />
+                                                <span>Join Room</span>
+                                                <ExternalLink className="w-3 h-3 opacity-70" />
+                                            </a>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </motion.div>
                 )}
 

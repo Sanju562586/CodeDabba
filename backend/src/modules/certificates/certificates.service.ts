@@ -195,7 +195,7 @@ export class CertificatesService {
     return saved;
   }
 
-  async generateCourseCertificate(userId: string, courseId: string) {
+  async generateCourseCertificate(userId: string, courseId: string, grade?: string) {
     const course = await this.coursesRepository.findOne({
       where: { id: courseId },
       relations: ['mentor'],
@@ -203,7 +203,13 @@ export class CertificatesService {
     if (!course) throw new NotFoundException('Course not found');
 
     const existing = await this.findByUserAndCourse(userId, courseId);
-    if (existing) return existing;
+    if (existing) {
+      if (grade && !existing.grade) {
+        existing.grade = grade;
+        await this.certificatesRepository.save(existing);
+      }
+      return existing;
+    }
 
     const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
@@ -221,6 +227,7 @@ export class CertificatesService {
       user,
       course,
       certificateId,
+      grade,
     );
 
     const certificate = this.certificatesRepository.create({
@@ -229,6 +236,7 @@ export class CertificatesService {
       courseId,
       type: CertificateType.COURSE_COMPLETION,
       fileUrl,
+      grade: grade || 'PASS',
     } as any);
 
     const saved = await this.certificatesRepository.save(certificate);
@@ -301,6 +309,7 @@ export class CertificatesService {
         course,
         certificate.certificateId,
         res,
+        certificate.grade,
       );
     } else {
       await this.pipeCertificateToStream(
@@ -513,6 +522,7 @@ export class CertificatesService {
     user: User,
     course: Course,
     certId: string,
+    grade?: string,
   ): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
       try {
@@ -527,6 +537,7 @@ export class CertificatesService {
           course,
           certId,
           bufferStream,
+          grade,
         );
       } catch (error) {
         reject(error);
@@ -539,6 +550,7 @@ export class CertificatesService {
     course: Course,
     certId: string,
     outputStream: any,
+    grade?: string,
   ): Promise<void> {
     const PDFGen = require('pdfkit');
     return new Promise(async (resolve, reject) => {
@@ -606,6 +618,16 @@ export class CertificatesService {
           .fontSize(24)
           .fillColor(mainTextColor)
           .text(course.title, 0, 340, { align: 'center' });
+
+        if (grade) {
+          doc
+            .font('Helvetica-Bold')
+            .fontSize(12)
+            .fillColor('#4F46E5')
+            .text(`Graduation Grade: ${grade.replace('_', ' ')}`, 0, 375, {
+              align: 'center',
+            });
+        }
 
         doc
           .font('Helvetica')

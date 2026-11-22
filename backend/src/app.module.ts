@@ -37,6 +37,11 @@ import { HackathonLeaderboard } from './entities/hackathon-leaderboard.entity';
 import { HackathonActivityLog } from './entities/hackathon-activity-log.entity';
 import { HackathonPayment } from './entities/hackathon-payment.entity';
 import { Notification } from './entities/notification.entity';
+import { AiChatLog } from './entities/ai-chat-log.entity';
+import { DoubtSession } from './entities/doubt-session.entity';
+import { FinalExam } from './entities/final-exam.entity';
+import { ExamQuestion } from './entities/exam-question.entity';
+import { ExamAttempt } from './entities/exam-attempt.entity';
 
 // Feature Modules
 import { AuthModule } from './auth/auth.module';
@@ -51,6 +56,9 @@ import { CertificatesModule } from './modules/certificates/certificates.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FilesModule } from './modules/files/files.module';
+import { AiModule } from './modules/ai/ai.module';
+import { DoubtSessionsModule } from './modules/doubt-sessions/doubt-sessions.module';
+import { FinalExamModule } from './modules/final-exam/final-exam.module';
 
 const logger = new Logger('AppModule');
 
@@ -136,6 +144,11 @@ const logger = new Logger('AppModule');
             HackathonActivityLog,
             HackathonPayment,
             Notification,
+            AiChatLog,
+            DoubtSession,
+            FinalExam,
+            ExamQuestion,
+            ExamAttempt,
           ],
           synchronize: true, // Dev only — use migrations in production
           ssl: requireSsl ? { rejectUnauthorized: false } : false,
@@ -156,6 +169,9 @@ const logger = new Logger('AppModule');
     CertificatesModule,
     PaymentsModule,
     NotificationsModule,
+    AiModule,
+    DoubtSessionsModule,
+    FinalExamModule,
   ],
 })
 export class AppModule {}

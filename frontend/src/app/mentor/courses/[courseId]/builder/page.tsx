@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
-import { ArrowLeft, Plus, Loader2, Save, ChevronDown, ChevronRight, FileText, Eye, Lock, CheckCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Save, ChevronDown, ChevronRight, FileText, Eye, Lock, CheckCircle, AlertCircle, Video } from "lucide-react";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import toast from 'react-hot-toast';
+import DoubtSessionsModal from "@/components/DoubtSessionsModal";
 
 interface Chapter {
     id: string;
@@ -43,6 +44,7 @@ export default function CourseBuilderPage() {
     const [isChapterModalOpen, setIsChapterModalOpen] = useState(false);
     const [newChapterTitle, setNewChapterTitle] = useState("");
     const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
+    const [isDoubtModalOpen, setIsDoubtModalOpen] = useState(false);
 
     useEffect(() => {
         fetchCourse();
@@ -224,6 +226,14 @@ export default function CourseBuilderPage() {
                         </div>
                     </div>
                     <div className="flex gap-3">
+                        <button
+                            onClick={() => setIsDoubtModalOpen(true)}
+                            className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 rounded-lg flex items-center gap-2 transition-colors font-medium text-sm"
+                        >
+                            <Video className="w-4 h-4" />
+                            <span>Live Doubt Sessions</span>
+                        </button>
+
                         {(isPhase1Editable || isPhase2Editable) && (
                             <button
                                 onClick={handleSubmitForReview}
@@ -422,6 +432,13 @@ export default function CourseBuilderPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <DoubtSessionsModal
+                courseId={courseId}
+                isOpen={isDoubtModalOpen}
+                onClose={() => setIsDoubtModalOpen(false)}
+                canSchedule={true}
+            />
         </div>
     );
 }

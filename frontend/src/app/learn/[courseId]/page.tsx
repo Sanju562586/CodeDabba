@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
-import { ArrowLeft, Menu, CheckCircle, Circle, PlayCircle, Loader2, Video, FileText, Download, Code, ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { ArrowLeft, Menu, CheckCircle, Circle, PlayCircle, Loader2, Video, FileText, Download, Code, ChevronDown, ChevronRight, Lock, Award, ShieldCheck } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "react-hot-toast";
 import TaskPreview from "@/components/TaskPreview";
+import AiChatDrawer from "@/components/AiChatDrawer";
+import DoubtSessionsModal from "@/components/DoubtSessionsModal";
+import Link from "next/link";
 
 interface LessonBlock {
     id: string;
@@ -66,6 +69,7 @@ export default function LearnPage() {
     const [chapterTasks, setChapterTasks] = useState<any[]>([]);
     const [passedTaskIds, setPassedTaskIds] = useState<string[]>([]);
     const [tasksLoading, setTasksLoading] = useState(false);
+    const [isDoubtModalOpen, setIsDoubtModalOpen] = useState(false);
 
     useEffect(() => {
         fetchCourseAndProgress();
@@ -296,6 +300,14 @@ export default function LearnPage() {
                         </div>
                     )}
                     <button
+                        onClick={() => setIsDoubtModalOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 rounded-xl text-xs font-semibold transition-colors"
+                    >
+                        <Video className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Doubt Sessions</span>
+                    </button>
+
+                    <button
                         onClick={() => setSidebarOpen(!sidebarOpen)}
                         className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 md:hidden"
                     >
@@ -367,6 +379,19 @@ export default function LearnPage() {
                                 )}
                             </div>
                         ))}
+                    </div>
+                    <div className="p-4 border-t border-zinc-800 bg-zinc-950/60">
+                        <Link
+                            href={`/learn/${courseId}/exam`}
+                            className="w-full flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-violet-600/20 to-indigo-600/20 hover:from-violet-600/30 hover:to-indigo-600/30 border border-violet-500/30 text-violet-300 transition-all text-xs font-bold"
+                        >
+                            <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
+                            <div className="truncate text-left">
+                                <p className="font-bold text-white">Final Exam</p>
+                                <p className="text-[10px] text-zinc-400 font-normal">Certification & Graduation</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-zinc-400 ml-auto shrink-0" />
+                        </Link>
                     </div>
                 </aside>
 
@@ -541,6 +566,13 @@ export default function LearnPage() {
                     </div>
                 </main>
             </div>
+
+            <AiChatDrawer courseId={courseId} chapterId={currentChapter?.id} />
+            <DoubtSessionsModal
+                courseId={courseId}
+                isOpen={isDoubtModalOpen}
+                onClose={() => setIsDoubtModalOpen(false)}
+            />
         </div>
     );
 }
