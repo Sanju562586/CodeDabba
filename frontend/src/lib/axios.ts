@@ -1,8 +1,35 @@
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
 const API_URL = `${cleanBaseUrl}/api/v1`;
+
+let coldStartTimer: any = null;
+let coldStartToastId: string | null = null;
+
+const startColdStartDetection = () => {
+    if (typeof window === 'undefined') return;
+    if (coldStartTimer) clearTimeout(coldStartTimer);
+    coldStartTimer = setTimeout(() => {
+        coldStartToastId = toast.loading('☁️ Free cloud server is waking up, please hold on...', {
+            id: 'render-cold-start',
+            duration: 20000,
+        });
+    }, 4000);
+};
+
+const clearColdStartDetection = () => {
+    if (typeof window === 'undefined') return;
+    if (coldStartTimer) {
+        clearTimeout(coldStartTimer);
+        coldStartTimer = null;
+    }
+    if (coldStartToastId) {
+        toast.dismiss('render-cold-start');
+        coldStartToastId = null;
+    }
+};
 
 const api = axios.create({
     baseURL: API_URL,
@@ -13,18 +40,26 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
+        startColdStartDetection();
         const token = sessionStorage.getItem('access_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
-    (error) => Promise.reject(error)
+    (error) => {
+        clearColdStartDetection();
+        return Promise.reject(error);
+    }
 );
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        clearColdStartDetection();
+        return response;
+    },
     async (error) => {
+        clearColdStartDetection();
         const originalRequest = error.config;
 
         // Skip interceptor for auth endpoints — let the calling code handle those errors

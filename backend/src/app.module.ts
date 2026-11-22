@@ -59,6 +59,8 @@ import { FilesModule } from './modules/files/files.module';
 import { AiModule } from './modules/ai/ai.module';
 import { DoubtSessionsModule } from './modules/doubt-sessions/doubt-sessions.module';
 import { FinalExamModule } from './modules/final-exam/final-exam.module';
+import { HealthModule } from './health/health.module';
+import { KeepAliveService } from './common/services/keep-alive.service';
 
 const logger = new Logger('AppModule');
 
@@ -111,6 +113,12 @@ const logger = new Logger('AppModule');
         return {
           type: 'postgres',
           url,
+          extra: {
+            max: parseInt(configService.get('DATABASE_POOL_MAX', '10'), 10),
+            connectionTimeoutMillis: 5000,
+            idleTimeoutMillis: 30000,
+            maxUses: 7500,
+          },
           entities: [
             User,
             StudentProfile,
@@ -172,6 +180,8 @@ const logger = new Logger('AppModule');
     AiModule,
     DoubtSessionsModule,
     FinalExamModule,
+    HealthModule,
   ],
+  providers: [KeepAliveService],
 })
 export class AppModule {}
