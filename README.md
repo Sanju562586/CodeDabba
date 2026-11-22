@@ -136,7 +136,30 @@ Run each command from its application's directory:
 
 ### Deploy
 
-The repository includes a Render service definition in [`render.yaml`](./render.yaml). Configure production secrets and service URLs in the deployment environment before deploying.
+#### Render
+
+The repository includes Docker-based backend and frontend services in [`render.yaml`](./render.yaml). Create or update the Render Blueprint from this file, then set the backend's required `DATABASE_URL`, `JWT_SECRET`, and `JWT_REFRESH_SECRET` values along with any integration credentials you use. Render supplies the service `PORT` automatically.
+
+The frontend's `NEXT_PUBLIC_API_URL` is used during its Docker build. Keep it set to the backend's base URL without `/api/v1`. Set the backend's `CORS_ALLOWED_ORIGINS` to the exact frontend origins you deploy, comma-separated (for example, your Vercel domain and the Render frontend URL).
+
+#### Vercel
+
+Vercel deploys the Next.js frontend using its native Next.js build; it does not deploy this Dockerfile. Create a Vercel project for this repository and set its **Root Directory** to `frontend`. Add `NEXT_PUBLIC_API_URL` to the Vercel project's environment variables, using the backend's base URL without `/api/v1`, then deploy. Add the resulting Vercel domain to the backend's `CORS_ALLOWED_ORIGINS` on Render.
+
+The frontend Dockerfile is for self-hosting or Render. To build it locally, pass the API URL as a build argument:
+
+```bash
+docker build -t codedabba-frontend --build-arg NEXT_PUBLIC_API_URL=https://your-backend.onrender.com ./frontend
+docker run --rm -p 3000:3000 codedabba-frontend
+```
+
+The backend Dockerfile can be built from its app directory:
+
+```bash
+docker build -t codedabba-backend ./backend
+```
+
+Pass backend secrets as runtime environment variables when starting the container; do not copy `.env` files into an image.
 
 ---
 
