@@ -91,7 +91,7 @@ function AdminCourseDetailsContent() {
         const feedback = prompt("Enter rejection feedback for mentor:");
         if (!feedback) return;
         try {
-            await api.post(`/courses/${courseId}/reject-curriculum`, { feedback });
+            await api.post(`/courses/${courseId}/reject-curriculum`, { reason: feedback, feedback });
             toast.success("Curriculum rejected with feedback");
             fetchDetails();
         } catch (error: any) {
@@ -113,7 +113,7 @@ function AdminCourseDetailsContent() {
         const feedback = prompt("Enter rejection feedback for mentor:");
         if (!feedback) return;
         try {
-            await api.post(`/courses/${courseId}/reject-content`, { feedback });
+            await api.post(`/courses/${courseId}/reject-content`, { reason: feedback, feedback });
             toast.success("Content rejected with feedback");
             fetchDetails();
         } catch (error: any) {

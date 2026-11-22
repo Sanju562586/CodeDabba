@@ -93,10 +93,10 @@ export default function CourseBuilderPage() {
     const handleConfirmAddChapter = async () => {
         if (!newChapterTitle.trim() || !activeModuleId) return;
         try {
-            const module = course?.modules.find(m => m.id === activeModuleId);
-            if (!module) return;
-            const maxOrderIndex = module.chapters.length
-                ? Math.max(...module.chapters.map(c => c.orderIndex))
+            const targetModule = course?.modules.find(m => m.id === activeModuleId);
+            if (!targetModule) return;
+            const maxOrderIndex = targetModule.chapters.length
+                ? Math.max(...targetModule.chapters.map(c => c.orderIndex))
                 : -1;
             const { data } = await api.post(`/courses/modules/${activeModuleId}/chapters`, {
                 title: newChapterTitle,

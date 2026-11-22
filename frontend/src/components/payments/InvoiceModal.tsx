@@ -27,12 +27,12 @@ export function InvoiceModal({ paymentId, onClose }: InvoiceModalProps) {
             }
         };
         fetchInvoice();
-    }, [paymentId, onClose]);
+    }, [paymentId]);
 
     const handleDownloadPdf = () => {
         // Construct the full backend API URL pointing directly to the generated PDF Express stream
-        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const pdfUrl = `${baseApiUrl.replace(/\/+$/, '')}/api/v1/payments/${paymentId}/invoice-pdf`;
+        const baseApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/+$/, '').replace(/\/api\/v1$/, '');
+        const pdfUrl = `${baseApiUrl}/api/v1/payments/${paymentId}/invoice-pdf`;
         
         // Open in new tab or trigger direct download
         window.open(pdfUrl, '_blank');

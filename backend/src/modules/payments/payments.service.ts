@@ -664,4 +664,172 @@ export class PaymentsService {
       }
     }
   }
+
+  // --- Manual Payment Proof Submission & Verification ---
+
+  async submitManualCoursePayment(
+    user: User,
+    courseId: string,
+    proofUrl: string,
+    transactionId?: string,
+    notes?: string,
+  ) {
+    const course = await this.coursesRepository.findOne({
+      where: { id: courseId },
+    });
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Check if user is already enrolled
+    const enrolled = await this.dataSource.getRepository('enrollment').findOne({
+      where: { userId: user.id, courseId },
+    });
+    if (enrolled) {
+      throw new BadRequestException('You are already enrolled in this course.');
+    }
+
+    // Check if an existing payment record exists for this user and course
+    let payment = await this.paymentsRepository.findOne({
+      where: {
+        userId: user.id,
+        courseId,
+        paymentType: PaymentType.COURSE,
+      },
+    });
+
+    const invoiceNumber = await this.generateInvoiceNumber();
+
+    if (!payment) {
+      payment = this.paymentsRepository.create({
+        userId: user.id,
+        courseId,
+        payerId: user.id,
+        amount: course.price,
+        currency: 'INR',
+        paymentType: PaymentType.COURSE,
+        paymentMethod: 'MANUAL_PROOF',
+        status: PaymentStatus.PENDING,
+        proofUrl,
+        transactionId: transactionId || `MANUAL-${Date.now()}`,
+        adminNote: notes || undefined,
+        invoiceNumber,
+      });
+    } else {
+      payment.proofUrl = proofUrl;
+      payment.paymentMethod = 'MANUAL_PROOF';
+      payment.status = PaymentStatus.PENDING;
+      payment.transactionId =
+        transactionId || payment.transactionId || `MANUAL-${Date.now()}`;
+      payment.adminNote = notes || payment.adminNote;
+    }
+
+    const saved = await this.paymentsRepository.save(payment);
+    return {
+      status: 'success',
+      message:
+        'Payment proof submitted successfully. Waiting for admin approval.',
+      payment: saved,
+    };
+  }
+
+  async getPendingManualPayments() {
+    return this.paymentsRepository.find({
+      where: {
+        paymentMethod: 'MANUAL_PROOF',
+        status: PaymentStatus.PENDING,
+      },
+      relations: ['user', 'course'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async verifyManualPayment(
+    paymentId: string,
+    approved: boolean,
+    note?: string,
+  ) {
+    const payment = await this.paymentsRepository.findOne({
+      where: { id: paymentId },
+      relations: ['user', 'course'],
+    });
+
+    if (!payment) {
+      throw new NotFoundException('Payment record not found');
+    }
+
+    if (approved) {
+      payment.status = PaymentStatus.SUCCESS;
+      payment.paidAt = new Date();
+      payment.adminNote = note || 'Approved by Admin';
+
+      if (payment.courseId) {
+        await this.coursesService.enroll(payment.userId, payment.courseId);
+      }
+    } else {
+      payment.status = PaymentStatus.FAILED;
+      payment.adminNote = note || 'Payment proof rejected by Admin';
+    }
+
+    const saved = await this.paymentsRepository.save(payment);
+    return {
+      status: 'success',
+      message: approved
+        ? 'Payment approved and student enrolled successfully.'
+        : 'Payment proof rejected.',
+      payment: saved,
+    };
+  }
+
+  async exportRevenueCsv(): Promise<string> {
+    const payments = await this.paymentsRepository.find({
+      where: { status: PaymentStatus.SUCCESS },
+      relations: ['user', 'course', 'hackathon'],
+      order: { createdAt: 'DESC' },
+    });
+
+    const headers = [
+      'Invoice Number',
+      'Date',
+      'User Name',
+      'User Email',
+      'Payment Type',
+      'Item Name',
+      'Amount',
+      'Currency',
+      'Payment Method',
+      'Transaction ID',
+    ];
+
+    const rows = payments.map((p) => {
+      const date = p.paidAt
+        ? new Date(p.paidAt).toISOString()
+        : new Date(p.createdAt).toISOString();
+      const userName = (p.user?.name || 'Unknown').replace(/"/g, '""');
+      const userEmail = (p.user?.email || '').replace(/"/g, '""');
+      const itemTitle = (
+        p.course?.title ||
+        p.hackathon?.title ||
+        p.paymentType ||
+        ''
+      ).replace(/"/g, '""');
+      const method = p.paymentMethod || 'RAZORPAY';
+      const txnId = p.transactionId || p.orderId || '';
+
+      return [
+        `"${p.invoiceNumber || p.id}"`,
+        `"${date}"`,
+        `"${userName}"`,
+        `"${userEmail}"`,
+        `"${p.paymentType}"`,
+        `"${itemTitle}"`,
+        p.amount,
+        `"${p.currency || 'INR'}"`,
+        `"${method}"`,
+        `"${txnId}"`,
+      ].join(',');
+    });
+
+    return [headers.join(','), ...rows].join('\n');
+  }
 }

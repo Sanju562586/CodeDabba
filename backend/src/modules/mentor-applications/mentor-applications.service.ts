@@ -139,7 +139,7 @@ export class MentorApplicationsService {
     const savedApplication =
       await this.mentorApplicationRepository.save(application);
 
-    const appUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const appUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
 
     // Send approval email to mentor
     await this.sendEmail(

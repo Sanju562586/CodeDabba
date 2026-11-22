@@ -15,13 +15,14 @@ import type { Response } from 'express'; // Fix linter error
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Multer } from 'multer'; // Ensure Multer types are loaded
 import { AuthGuard } from '../../common/guards/auth.guard';
+import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard';
 
 @Controller('files')
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Post('upload')
-  @UseGuards(AuthGuard)
+  @UseGuards(OptionalAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
