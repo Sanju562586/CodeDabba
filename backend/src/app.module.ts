@@ -91,6 +91,13 @@ const logger = new Logger('AppModule');
         if (!url)
           throw new Error('DATABASE_URL environment variable is not defined');
 
+        const isProd = configService.get<string>('NODE_ENV') === 'production';
+        const requireSsl =
+          isProd ||
+          configService.get<string>('DATABASE_SSL') === 'true' ||
+          (url &&
+            (url.includes('sslmode=require') || url.includes('render.com')));
+
         return {
           type: 'postgres',
           url,
@@ -128,7 +135,7 @@ const logger = new Logger('AppModule');
             HackathonPayment,
           ],
           synchronize: true, // Dev only — use migrations in production
-          ssl: { rejectUnauthorized: false },
+          ssl: requireSsl ? { rejectUnauthorized: false } : false,
         };
       },
     }),

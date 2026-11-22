@@ -179,8 +179,9 @@ export class CoursesController {
   async rejectCurriculum(
     @Request() req: any,
     @Param('id') id: string,
-    @Body('reason') reason: string,
+    @Body() body: { reason?: string; feedback?: string },
   ) {
+    const reason = body?.reason || body?.feedback || '';
     return await this.coursesService.rejectCurriculum(req.user, id, reason);
   }
 
@@ -204,8 +205,9 @@ export class CoursesController {
   async rejectContent(
     @Request() req: any,
     @Param('id') id: string,
-    @Body('reason') reason: string,
+    @Body() body: { reason?: string; feedback?: string },
   ) {
+    const reason = body?.reason || body?.feedback || '';
     return await this.coursesService.rejectContent(req.user, id, reason);
   }
 

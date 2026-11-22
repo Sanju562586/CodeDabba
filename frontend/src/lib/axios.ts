@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const API_URL = `${baseApiUrl.replace(/\/+$/, '')}/api/v1`;
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
+const API_URL = `${cleanBaseUrl}/api/v1`;
 
 const api = axios.create({
     baseURL: API_URL,

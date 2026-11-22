@@ -894,10 +894,6 @@ function SubmissionsTab({ hackathonId, rounds }: any) {
     const [loading, setLoading] = useState(true);
     const [selectedTeam, setSelectedTeam] = useState<any>(null);
 
-    useEffect(() => {
-        fetchSubmissions();
-    }, [hackathonId]);
-
     const fetchSubmissions = async () => {
         try {
             const res = await api.get(`/hackathons/${hackathonId}/admin-detailed-teams`);
@@ -908,6 +904,10 @@ function SubmissionsTab({ hackathonId, rounds }: any) {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchSubmissions();
+    }, [hackathonId]);
 
     if (loading) return <div className="p-24 text-center text-zinc-500 italic uppercase font-black tracking-widest animate-pulse">Intercepting data packets...</div>;
 

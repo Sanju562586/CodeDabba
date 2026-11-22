@@ -12,6 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { HackathonStatus } from '../../../entities/hackathon.entity';
+import { RoundPaymentType } from '../../../entities/hackathon-round.entity';
 
 class CreateRoundDto {
   @IsString()
@@ -48,6 +49,10 @@ class CreateRoundDto {
 
   @IsNumber()
   @IsOptional()
+  eliminationThreshold?: number;
+
+  @IsNumber()
+  @IsOptional()
   @Min(0)
   weightagePercentage?: number;
 
@@ -76,6 +81,22 @@ class CreateRoundDto {
   @IsOptional()
   @IsString({ each: true })
   allowedFileTypes?: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  isPaymentRequired?: boolean;
+
+  @IsNumber()
+  @IsOptional()
+  paymentAmount?: number;
+
+  @IsDateString()
+  @IsOptional()
+  paymentDeadline?: string;
+
+  @IsEnum(RoundPaymentType)
+  @IsOptional()
+  paymentType?: RoundPaymentType;
 }
 
 export class CreateHackathonDto {
@@ -138,6 +159,26 @@ export class CreateHackathonDto {
   @IsBoolean()
   @IsOptional()
   allowTeam?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isPaid?: boolean;
+
+  @IsNumber()
+  @IsOptional()
+  registrationFee?: number;
+
+  @IsDateString()
+  @IsOptional()
+  paymentDeadline?: string;
+
+  @IsString()
+  @IsOptional()
+  currency?: string;
+
+  @IsString()
+  @IsOptional()
+  refundPolicy?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

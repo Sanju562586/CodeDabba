@@ -171,7 +171,7 @@ export function HeroSection() {
 
                         {/* Output Panel */}
                         <div className="mt-5 p-4 bg-black/50 rounded-2xl border border-white/5">
-                            <div className="text-xs text-zinc-600 font-mono mb-2">// Output</div>
+                            <div className="text-xs text-zinc-600 font-mono mb-2">{"// Output"}</div>
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm font-bold">✓</div>
                                 <div>

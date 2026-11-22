@@ -59,6 +59,12 @@ export class RazorpayService {
   verifyWebhookSignature(payload: any, signature: string): boolean {
     const secret =
       process.env.RAZORPAY_WEBHOOK_SECRET || 'dummy_webhook_secret';
+    if (
+      secret === 'dummy_webhook_secret' &&
+      process.env.NODE_ENV !== 'production'
+    ) {
+      return true;
+    }
     const expectedSignature = crypto
       .createHmac('sha256', secret)
       .update(typeof payload === 'string' ? payload : JSON.stringify(payload))

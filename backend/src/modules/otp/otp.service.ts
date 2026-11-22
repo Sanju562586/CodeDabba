@@ -20,12 +20,10 @@ export class OtpService {
   async handleCron() {
     this.logger.debug('Running OTP cleanup task...');
     try {
-      const result = await this.otpRepository
-        .createQueryBuilder()
-        .delete()
-        .from(Otp)
-        .where("createdAt < NOW() - INTERVAL '10 minutes'")
-        .execute();
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const result = await this.otpRepository.delete({
+        createdAt: LessThan(tenMinutesAgo),
+      });
 
       if (result.affected && result.affected > 0) {
         this.logger.debug(`Deleted ${result.affected} expired OTPs.`);

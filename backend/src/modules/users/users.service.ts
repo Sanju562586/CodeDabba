@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -102,6 +103,27 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    const courseCount = await this.usersRepository.manager.count('course', {
+      where: { mentorId: id },
+    });
+    if (courseCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete mentor with existing courses. Please reassign or delete the courses first.',
+      );
+    }
+
+    const hackathonCount = await this.usersRepository.manager.count(
+      'hackathon',
+      {
+        where: { createdById: id },
+      },
+    );
+    if (hackathonCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete user who created hackathons.',
+      );
+    }
+
     await this.usersRepository.manager.transaction(async (manager) => {
       await manager.delete('refresh_token', { userId: id });
       await manager.delete('student_profile', { userId: id });
@@ -116,6 +138,7 @@ export class UsersService {
       await manager.delete('hackathon_registration', { studentId: id });
       await manager.delete('hackathon_payments', { userId: id });
       await manager.delete('certificate', { userId: id });
+      await manager.delete('hackathon_team', { leadId: id });
       await manager.remove(user);
     });
 
