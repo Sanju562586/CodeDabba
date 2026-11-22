@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" fill="none">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1200" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10152D"/>
+      <stop offset="0.55" stop-color="#17234A"/>
+      <stop offset="1" stop-color="#123F56"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#78E4D2"/>
+      <stop offset="1" stop-color="#67A9FF"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#202B50"/>
+      <stop offset="1" stop-color="#15203D"/>
+    </linearGradient>
+    <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.5" fill="#A4B8E8" fill-opacity="0.24"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="360" rx="28" fill="url(#background)"/>
+  <path d="M820 0h380v360H690c119-61 192-171 130-360Z" fill="#4B73C4" fill-opacity="0.08"/>
+  <path d="M0 278c162-72 279-61 437 82H0v-82Z" fill="#50D7C2" fill-opacity="0.08"/>
+  <rect x="972" y="34" width="176" height="292" rx="18" fill="url(#dots)"/>
+  <text x="76" y="90" fill="#A8B9DF" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="4">LEARN · BUILD · GROW</text>
+  <text x="72" y="179" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="750" letter-spacing="-2">CodeDabba</text>
+  <text x="76" y="225" fill="#D6E1F7" font-family="Segoe UI, Arial, sans-serif" font-size="25">Learn by building. Grow by sharing what you build.</text>
+  <rect x="76" y="269" width="348" height="4" rx="2" fill="url(#accent)"/>
+  <text x="76" y="305" fill="#A8B9DF" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" letter-spacing="2">COURSES  /  PRACTICE  /  HACKATHONS</text>
+  <rect x="780" y="74" width="214" height="214" rx="36" fill="url(#panel)" stroke="#8195C5" stroke-opacity="0.34" stroke-width="2"/>
+  <rect x="806" y="100" width="162" height="162" rx="24" fill="#111A34"/>
+  <path d="m856 151-27 30 27 30M918 151l27 30-27 30m-20-70-17 80" stroke="url(#accent)" stroke-linecap="round" stroke-linejoin="round" stroke-width="9"/>
+  <circle cx="1040" cy="92" r="11" fill="#79E4D2"/>
+  <circle cx="1076" cy="92" r="11" fill="#83A7FF"/>
+  <circle cx="1112" cy="92" r="11" fill="#E0A7FF"/>
+</svg>

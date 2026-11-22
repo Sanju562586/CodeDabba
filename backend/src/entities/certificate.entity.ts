@@ -61,6 +61,9 @@ export class Certificate {
   @Column({ nullable: true })
   position: string; // e.g. "1st Place", "Finalist"
 
+  @Column({ nullable: true })
+  grade: string; // e.g. "DISTINCTION", "FIRST_CLASS", "PASS"
+
   @Column()
   fileUrl: string;
 
