@@ -63,10 +63,51 @@ export default function LearnPage() {
     const [currentChapter, setCurrentChapter] = useState<Chapter | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [expandedModules, setExpandedModules] = useState<string[]>([]);
+    const [chapterTasks, setChapterTasks] = useState<any[]>([]);
+    const [passedTaskIds, setPassedTaskIds] = useState<string[]>([]);
+    const [tasksLoading, setTasksLoading] = useState(false);
 
     useEffect(() => {
         fetchCourseAndProgress();
     }, [courseId]);
+
+    useEffect(() => {
+        if (!currentChapter?.id) {
+            setChapterTasks([]);
+            setPassedTaskIds([]);
+            return;
+        }
+
+        if (!course?.isEnrolled) {
+            setChapterTasks(currentChapter.tasks || []);
+            setPassedTaskIds([]);
+            return;
+        }
+
+        const fetchChapterTasks = async () => {
+            setTasksLoading(true);
+            try {
+                const { data } = await api.get(`/chapters/${currentChapter.id}/tasks/student`);
+                setChapterTasks(data.tasks || []);
+                const passed = (data.tasks || []).filter((t: any) => t.isPassed).map((t: any) => t.id);
+                setPassedTaskIds(passed);
+            } catch (err) {
+                console.warn("Falling back to chapter tasks", err);
+                setChapterTasks(currentChapter.tasks || []);
+            } finally {
+                setTasksLoading(false);
+            }
+        };
+
+        fetchChapterTasks();
+    }, [currentChapter?.id, course?.isEnrolled]);
+
+    const handleTaskPassed = (taskId: string) => {
+        setPassedTaskIds((prev) => (prev.includes(taskId) ? prev : [...prev, taskId]));
+    };
+
+    const allTasksPassed =
+        chapterTasks.length === 0 || chapterTasks.every((t) => passedTaskIds.includes(t.id));
 
     const fetchCourseAndProgress = async () => {
         try {
@@ -414,23 +455,53 @@ export default function LearnPage() {
                                 </div>
 
                                 {/* Tasks Section */}
-                                {currentChapter.tasks && currentChapter.tasks.length > 0 && (
+                                {chapterTasks && chapterTasks.length > 0 && (
                                     <div className="mt-16 pt-8 border-t border-zinc-800">
-                                        <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                                            <Code className="w-6 h-6 text-violet-500" />
-                                            Tasks & Assignments
-                                        </h3>
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="text-2xl font-bold flex items-center gap-3">
+                                                <Code className="w-6 h-6 text-violet-500" />
+                                                Tasks & Exercises
+                                            </h3>
+                                            <span
+                                                className={`text-xs font-bold uppercase px-3 py-1 rounded-full border ${
+                                                    allTasksPassed
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                }`}
+                                            >
+                                                {passedTaskIds.length}/{chapterTasks.length} Completed
+                                            </span>
+                                        </div>
                                         <div className="space-y-6">
-                                            {currentChapter.tasks.map((task) => (
-                                                <TaskPreview key={task.id} task={task as any} />
+                                            {chapterTasks.map((task) => (
+                                                <TaskPreview
+                                                    key={task.id}
+                                                    task={task as any}
+                                                    chapterId={currentChapter.id}
+                                                    interactive={!!course.isEnrolled}
+                                                    onTaskPassed={handleTaskPassed}
+                                                />
                                             ))}
                                         </div>
                                     </div>
                                 )}
 
+                                {/* Strict Progression Lock Notice */}
+                                {course.isEnrolled && !allTasksPassed && (
+                                    <div className="mt-8 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-300 text-sm">
+                                        <Lock className="w-5 h-5 shrink-0 text-amber-400" />
+                                        <span>
+                                            <strong>Progression Gate:</strong> You must complete and pass all {chapterTasks.length} task(s) in this lesson to unlock the next chapter.
+                                        </span>
+                                    </div>
+                                )}
+
                                 {/* Navigation Actions - Next/Prev */}
-                                <div className="mt-12 flex justify-between pt-8 border-t border-zinc-800">
-                                    <button className="px-6 py-3 rounded-xl border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-50" disabled>
+                                <div className="mt-8 flex justify-between pt-6 border-t border-zinc-800">
+                                    <button
+                                        className="px-6 py-3 rounded-xl border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                                        disabled
+                                    >
                                         Previous Lesson
                                     </button>
                                     <button
@@ -441,9 +512,28 @@ export default function LearnPage() {
                                                 handleComplete();
                                             }
                                         }}
-                                        className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold shadow-lg shadow-violet-900/20 transition-all"
+                                        disabled={course?.isEnrolled && !allTasksPassed}
+                                        className={`px-8 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 ${
+                                            !course?.isEnrolled
+                                                ? 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-900/20'
+                                                : allTasksPassed
+                                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-900/30'
+                                                : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700'
+                                        }`}
                                     >
-                                        {course?.isEnrolled ? "Mark Complete & Next" : "Enroll to Track Progress"}
+                                        {!course?.isEnrolled ? (
+                                            'Enroll to Track Progress'
+                                        ) : allTasksPassed ? (
+                                            <>
+                                                <CheckCircle className="w-4 h-4" />
+                                                Complete Lesson & Next
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Lock className="w-4 h-4 text-amber-400" />
+                                                Complete Tasks to Unlock
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>

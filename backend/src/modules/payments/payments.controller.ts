@@ -13,6 +13,9 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { PaymentsService } from './payments.service';
 import type { Response } from 'express';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../entities/user.entity';
 
 @Controller('payments')
 export class PaymentsController {
@@ -137,5 +140,62 @@ export class PaymentsController {
 
     // Automatically writes buffer directly down the res stream
     return this.paymentsService.generateInvoicePDF(invoiceData, res);
+  }
+
+  // --- Manual Payment Proof Submission & Verification Endpoints ---
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('course/manual-proof')
+  async submitManualCoursePayment(
+    @Req() req: any,
+    @Body()
+    body: {
+      courseId: string;
+      proofUrl: string;
+      transactionId?: string;
+      notes?: string;
+    },
+  ) {
+    return this.paymentsService.submitManualCoursePayment(
+      req.user,
+      body.courseId,
+      body.proofUrl,
+      body.transactionId,
+      body.notes,
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/manual-pending')
+  async getPendingManualPayments() {
+    return this.paymentsService.getPendingManualPayments();
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.ADMIN)
+  @Post('admin/manual-verify/:id')
+  async verifyManualPayment(
+    @Param('id') id: string,
+    @Body() body: { approved: boolean; note?: string },
+  ) {
+    return this.paymentsService.verifyManualPayment(
+      id,
+      body.approved,
+      body.note,
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/export-csv')
+  async exportRevenueCsv(@Res() res: Response) {
+    const csvData = await this.paymentsService.exportRevenueCsv();
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="codedabba-revenue-report.csv"',
+    );
+    return res.send(csvData);
   }
 }
